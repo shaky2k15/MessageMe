@@ -1,24 +1,28 @@
 # Best Practices for Agentic Android Development
 
-This guide outlines the best practices followed during the development of **MessageMe**, which can be applied to any similar project requiring high test coverage and robust architecture.
+This guide outlines the best practices followed during the modernization of **MessageMe**, specifically designed for high-scalability and agentic maintainability.
 
 ## 1. Architectural Patterns
-- **Decouple Business Logic from UI**: Avoid putting logic (database queries, network calls, data parsing) inside the `Activity` or `Fragment`. Use the **Repository Pattern** and **Engine Pattern** (pure Kotlin classes) to make code testable.
-- **Shadow Database for Metadata**: When working with system providers (like SMS), maintain a separate SQLite database for application-specific metadata (tags, colors, custom flags) to ensure interoperability.
-- **Dependency Injection**: Use `remember` and `LaunchedEffect` in Compose to inject repositories, or use Hilt/Dagger for larger projects.
+- **Repository Pattern**: All data access (Telephony, Contacts, Metadata) must be abstracted by `MessageRepository`. Never access the database or content resolver directly from a Composable or ViewModel.
+- **ViewModel State Management**: Screens must observe read-only `StateFlow`s from an `AndroidViewModel`. Use `viewModelScope` to ensure I/O operations are cancelled when the screen is closed.
+- **Thread-Safe Singletons**: Shared resources like `SQLiteOpenHelper` (`TagsDbHelper`) must be singletons to prevent connection leaks and database lock contention.
+- **Reactive Cross-Screen Signals**: Use `SharedFlow` for signaling events between unrelated ViewModels (e.g., refreshing the inbox when a tag is updated in a chat thread). See [ADR-004](decisions/ADR-004-tagschanged-signal.md).
 
-## 2. Testing & Coverage
-- **Robolectric for Framework Testing**: Use Robolectric to run tests that require Android components (Context, ContentResolver) on the JVM without needing an emulator.
-- **Mocking with MockK**: Use MockK to isolate the unit under test. Mock system services like `SmsManager` or `SubscriptionManager`.
-- **Kover for Metrics**: Use `kotlinx-kover` for accurate coverage reporting. Aim for 95%+ coverage on all `data` and `domain` layers.
+## 2. Governance & Enforcement
+- **Lint as Architect**: Use custom Android Lint rules to enforce package boundaries. If a UI class tries to access a Data class it shouldn't, the build must fail.
+- **Static Analysis (Detekt)**: Enforce strict limits on file size, function complexity, and forbidden API calls (e.g., blocking deprecated Google Sign-In).
+- **Mandatory CI Gates**: Never merge a PR without a green build, successful linting, and 95%+ code coverage.
 
-## 3. Agentic Workflow Steps
-1.  **Feature Discovery**: Define clear requirements and research Android version-specific limitations early.
-2.  **Implementation Planning**: Always create an `implementation_plan.md` first. This prevents "coding into a corner" and identifies architectural bottlenecks.
-3.  **Iterative Refactoring**: Don't be afraid to refactor a monolithic file early. It's easier to refactor at the start of a feature than at the end.
-4.  **Automated Verification**: Build CI/CD pipelines early to verify that new changes don't break existing coverage.
+## 3. Testing & Coverage
+- **Robolectric for Framework Testing**: Use Robolectric for JVM-based tests requiring `ContentResolver` or `Context`.
+- **Mocking with MockK**: Isolate logic by mocking system services like `SmsManager`.
+- **Kover for Metrics**: Use `kotlinx-kover` for accurate coverage reporting. Aim for 95%+ coverage on all `data` and `ui/viewmodel` layers.
 
-## 4. UI/UX Best Practices
-- **Material3 Design System**: Use standard Material3 components and color schemes for a premium, native feel.
-- **Permission Handling**: Always use a clean, user-friendly permission request flow before accessing sensitive data like SMS or Contacts.
-- **Responsive Layouts**: Use `LocalConfiguration` to adjust UI components (like Drawer width) based on screen size.
+## 4. Agentic Workflow Steps
+1.  **Architecture Decision Records (ADRs)**: Always document the *why* behind a pattern change before implementing it. This provides the AI and future developers with a source of truth.
+2.  **Planning Mode**: For complex migrations (like Auth or threading), use Planning Mode to generate a technical contract before writing code.
+3.  **Governance Audits**: Periodically ask the AI to run a "Scalability Audit" to identify new technical debt or deprecated API usage.
+
+## 5. UI/UX Best Practices
+- **Material3 Design System**: Use standard Material3 tokens for a premium, native feel.
+- **Thread-Safe UI**: Ensure no I/O is performed in `LaunchedEffect` without an explicit `withContext(Dispatchers.IO)` wrapper.
