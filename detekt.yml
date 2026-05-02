@@ -9,8 +9,6 @@ config:
   validation: true
   warningsAsErrors: false
 
-# ── Rules enabled for this project ────────────────────────────────────────────
-
 comments:
   active: true
   UndocumentedPublicFunction:
@@ -21,7 +19,6 @@ complexity:
   active: true
   TooManyFunctions:
     active: true
-    # A composable file growing past 30 functions is a warning sign
     thresholdInFiles: 30
     thresholdInClasses: 20
     excludes: [ '**/test/**' ]
@@ -37,32 +34,24 @@ naming:
   active: true
   FunctionNaming:
     active: true
-    # Allow @Composable PascalCase functions
     functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
 
-# ── Forbidden API calls — catch deprecated patterns before they merge ──────────
 potential-bugs:
   active: true
-  AvoidReferenceToMutableStateFlowFromOutsideOwner:
-    active: false
 
-# Use ForbiddenMethodCall to block deprecated auth patterns
 style:
   active: true
   ForbiddenMethodCall:
     active: true
     methods:
-      # Block direct SmsManager.getDefault() without API guard
       - reason: "Use Build.VERSION.SDK_INT >= S check. See ADR-005 and MessageRepository.sendSmsMessage for the correct pattern."
         value: "android.telephony.SmsManager.getDefault()"
-      # Block legacy GoogleSignIn
       - reason: "GoogleSignIn is deprecated. Use Identity.getAuthorizationClient. See ADR-005."
         value: "com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(android.content.Context, com.google.android.gms.auth.api.signin.GoogleSignInOptions)"
       - reason: "GoogleSignIn is deprecated. Use Identity.getAuthorizationClient. See ADR-005."
         value: "com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(android.content.Intent)"
   MagicNumber:
     active: true
-    # MMS address type codes should be named constants
     ignoreNumbers: [ '-1', '0', '1', '2', '10', '100' ]
     ignoreAnnotated: [ 'androidx.compose.ui.tooling.preview.Preview' ]
     ignoreHashCodeFunction: true
@@ -70,27 +59,16 @@ style:
     ignoreLocalVariableDeclaration: false
     ignoreConstantDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
-    ignoreDefaultArgumentValues: true
     ignoreEnums: true
     ignoreRanges: false
     ignoreExtensionFunctions: true
   UnusedImports:
     active: true
   WildcardImport:
-    active: false  # Project uses wildcard compose imports — disable for now
+    active: false
 
-# ── Exclusions ──────────────────────────────────────────────────────────────────
-# Exclude generated files and test boilerplate
 output-reports:
   active: true
 
 processors:
   active: true
-
-# Files that should be excluded from all rules
-excludes:
-  - '**/build/**'
-  - '**/test/**'
-  - '**/androidTest/**'
-  - '**/.gradle/**'
-  - '**/resources/**'

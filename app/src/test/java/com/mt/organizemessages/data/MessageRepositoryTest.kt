@@ -5,7 +5,6 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.provider.ContactsContract
 import android.provider.Telephony
-import androidx.test.core.app.ApplicationProvider
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -150,14 +149,18 @@ class MessageRepositoryTest {
         
         val msgs = repository.fetchSms(10L)
         assertEquals(1, msgs.size)
-        verify { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), match { it?.contains("thread_id = ?") == true }, arrayOf("10"), any()) }
+        verify { 
+            contentResolver.query(Telephony.Sms.CONTENT_URI, any(), match { it?.contains("thread_id = ?") == true }, arrayOf("10"), any()) 
+        }
     }
 
     @Test
     fun testFetchMmsWithThreadId() {
         val cursor = MatrixCursor(arrayOf("_id", "thread_id", "date", "msg_box"))
         cursor.addRow(arrayOf("1", 10L, 0L, 1))
-        every { contentResolver.query(Telephony.Mms.CONTENT_URI, any(), match { it?.contains("thread_id = ?") == true }, any(), any()) } returns cursor
+        every { 
+            contentResolver.query(Telephony.Mms.CONTENT_URI, any(), match { it?.contains("thread_id = ?") == true }, any(), any()) 
+        } returns cursor
         every { contentResolver.query(Uri.parse("content://mms/part"), any(), any(), any(), any()) } returns null
         every { contentResolver.query(Uri.parse("content://mms/1/addr"), any(), any(), any(), any()) } returns null
         

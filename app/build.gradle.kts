@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.owasp.dependencycheck)
     id("org.jetbrains.kotlinx.kover") version "0.8.3"
     id("jacoco")
 }
@@ -21,6 +22,13 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        lint {
+            abortOnError = false
+            checkDependencies = true
+            enable += "Security"
+            fatal += "Security"
+        }
     }
 
     buildTypes {
@@ -81,6 +89,14 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     executionData.setFrom(fileTree(layout.buildDirectory.get().asFile) {
         include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
     })
+}
+
+dependencyCheck {
+    failBuildOnCVSS = 7.0f
+    formats = mutableListOf("HTML", "JSON")
+    analyzers {
+        assemblyEnabled = false // Not needed for Android
+    }
 }
 
 
