@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "MessageMe"
 include(":app")
+include(":lint-rules")

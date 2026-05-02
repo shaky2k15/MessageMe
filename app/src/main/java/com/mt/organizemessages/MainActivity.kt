@@ -3,9 +3,6 @@ package com.mt.organizemessages
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
@@ -17,6 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,23 +42,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import android.webkit.WebView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.mt.organizemessages.ui.theme.MessageMeTheme
 import com.mt.organizemessages.data.MessageRepository
-import com.mt.organizemessages.data.TagsDbHelper
 import com.mt.organizemessages.domain.BackupEngine
 import com.mt.organizemessages.domain.MetricsEngine
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.mt.organizemessages.ui.InboxViewModel
+import com.mt.organizemessages.ui.ThreadViewModel
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.auth.oauth2.BearerToken
+import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.http.ByteArrayContent
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
-import com.google.api.services.drive.model.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -236,104 +235,65 @@ fun MainSmsScreen(
     onNavigateToTagFilter: (String) -> Unit
 ) {
     val context = LocalContext.current
-    val messageRepo = remember { MessageRepository(context) }
-    var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
-    var blockedSenders by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var archivedThreads by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    val inboxViewModel: InboxViewModel = viewModel()
+    val messages by inboxViewModel.messages.collectAsState()
+    val blockedSenders by inboxViewModel.blockedSenders.collectAsState()
+    val archivedThreads by inboxViewModel.archivedThreads.collectAsState()
+    val allTags by inboxViewModel.allTags.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-    
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val drawerWidth = configuration.screenWidthDp.dp * 0.3f
 
-    val gso = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .requestScopes(Scope(DriveScopes.DRIVE_FILE))
-            .build()
-    }
-    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
-
+    // P1: Identity.getAuthorizationClient replaces deprecated GoogleSignIn
     val driveAuthLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
+        ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-        try {
-            val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
-            if (account != null) {
-                backupToDrive(context, account, messages)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, "Google Sign-In Failed: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    DisposableEffect(context) {
-        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                val db = TagsDbHelper(context)
-                blockedSenders = db.getBlockedSenders()
-                archivedThreads = db.getArchivedThreads()
-                messages = messageRepo.fetchAllMessages()
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            try {
+                val authResult = Identity.getAuthorizationClient(context)
+                    .getAuthorizationResultFromIntent(result.data!!)
+                authResult.accessToken?.let { backupToDrive(context, it, messages) }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Auth Failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
-        val db = TagsDbHelper(context)
-        blockedSenders = db.getBlockedSenders()
-        archivedThreads = db.getArchivedThreads()
-        context.contentResolver.registerContentObserver(Uri.parse("content://mms-sms/conversations"), true, observer)
-        messages = messageRepo.fetchAllMessages()
-        onDispose { context.contentResolver.unregisterContentObserver(observer) }
     }
 
-    val allTags = remember(messages) {
-        val db = TagsDbHelper(context)
-        db.getAllTagsMap().values.flatten().distinct().filter { it.isNotBlank() }.sorted()
-    }
-
-    val visibleMessages = messages.filter { 
-        !blockedSenders.contains(it.address) && 
+    val visibleMessages = messages.filter {
+        !blockedSenders.contains(it.address) &&
         !archivedThreads.contains(it.threadId) &&
-        (searchQuery.isBlank() || 
-         it.address.contains(searchQuery, ignoreCase = true) || 
+        (searchQuery.isBlank() ||
+         it.address.contains(searchQuery, ignoreCase = true) ||
          it.body.contains(searchQuery, ignoreCase = true))
     }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier.width(drawerWidth)
-            ) {
+            ModalDrawerSheet(modifier = Modifier.width(drawerWidth)) {
                 Spacer(Modifier.height(16.dp))
                 NavigationDrawerItem(
-                    label = { Text("Settings") },
-                    selected = false,
+                    label = { Text("Settings") }, selected = false,
                     onClick = { scope.launch { drawerState.close() }; onNavigateToSettings() }
                 )
                 NavigationDrawerItem(
-                    label = { Text("About") },
-                    selected = false,
+                    label = { Text("About") }, selected = false,
                     onClick = { scope.launch { drawerState.close() }; onNavigateToAbout() }
                 )
                 if (allTags.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text(
-                        "Tags",
-                        style = MaterialTheme.typography.labelMedium,
+                    Text("Tags", style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(start = 28.dp, bottom = 8.dp, top = 8.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                        color = MaterialTheme.colorScheme.primary)
                     allTags.forEach { tag ->
                         NavigationDrawerItem(
                             label = { Text(tag) },
                             icon = { Icon(Icons.Filled.LocalOffer, contentDescription = null, modifier = Modifier.size(18.dp)) },
                             selected = false,
-                            onClick = { 
-                                scope.launch { drawerState.close() }
-                                onNavigateToTagFilter(tag)
-                            }
+                            onClick = { scope.launch { drawerState.close() }; onNavigateToTagFilter(tag) }
                         )
                     }
                 }
@@ -342,7 +302,7 @@ fun MainSmsScreen(
     ) {
         Scaffold(
             modifier = modifier.fillMaxSize(),
-            topBar = { 
+            topBar = {
                 TopAppBar(
                     title = { Text("Inbox") },
                     navigationIcon = {
@@ -359,15 +319,39 @@ fun MainSmsScreen(
                                 Icon(Icons.Filled.Analytics, contentDescription = "Metrics")
                             }
                         }
-                        IconButton(onClick = { 
-                            googleSignInClient.signOut().addOnCompleteListener {
-                                driveAuthLauncher.launch(googleSignInClient.signInIntent)
+                        IconButton(onClick = {
+                            scope.launch {
+                                try {
+                                    val authRequest = AuthorizationRequest.builder()
+                                        .setRequestedScopes(listOf(Scope(DriveScopes.DRIVE_FILE)))
+                                        .build()
+                                    Identity.getAuthorizationClient(context)
+                                        .authorize(authRequest)
+                                        .addOnSuccessListener { authResult ->
+                                            if (authResult.hasResolution()) {
+                                                driveAuthLauncher.launch(
+                                                    IntentSenderRequest.Builder(
+                                                        authResult.pendingIntent!!.intentSender
+                                                    ).build()
+                                                )
+                                            } else {
+                                                authResult.accessToken?.let {
+                                                    backupToDrive(context, it, messages)
+                                                }
+                                            }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Toast.makeText(context, "Auth Failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }) {
                             Icon(Icons.Filled.CloudUpload, contentDescription = "Backup to Google Drive")
                         }
                     }
-                ) 
+                )
             },
             floatingActionButton = {
                 FloatingActionButton(onClick = onNavigateToNewMessage) {
@@ -384,7 +368,6 @@ fun MainSmsScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     shape = RoundedCornerShape(24.dp)
                 )
-
                 if (visibleMessages.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                         Text("Your inbox is empty.")
@@ -393,18 +376,14 @@ fun MainSmsScreen(
                     LazyColumn(modifier = Modifier.fillMaxSize().weight(1f)) {
                         items(visibleMessages) { msg ->
                             InboxItem(
-                                msg = msg, 
+                                msg = msg,
                                 onClick = { onNavigateToThread(msg.threadId, msg.address) },
                                 onArchive = {
-                                    val db = TagsDbHelper(context)
-                                    db.setArchivedThread(msg.threadId)
-                                    archivedThreads = db.getArchivedThreads()
+                                    inboxViewModel.archiveThread(msg.threadId)
                                     Toast.makeText(context, "Thread Archived", Toast.LENGTH_SHORT).show()
                                 },
                                 onBlock = {
-                                    val db = TagsDbHelper(context)
-                                    db.setBlockedSender(msg.address)
-                                    blockedSenders = db.getBlockedSenders()
+                                    inboxViewModel.blockSender(msg.address)
                                     Toast.makeText(context, "Sender Blocked & Reported", Toast.LENGTH_SHORT).show()
                                 }
                             )
@@ -416,32 +395,21 @@ fun MainSmsScreen(
     }
 }
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThreadScreen(modifier: Modifier = Modifier, threadId: Long, address: String, isTaggingEnabled: Boolean, onNavigateBack: () -> Unit, onTagClick: (String) -> Unit) {
     val context = LocalContext.current
-    val messageRepo = remember { MessageRepository(context) }
-    var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    val threadViewModel: ThreadViewModel = viewModel()
+    val messages by threadViewModel.messages.collectAsState()
     var replyText by remember { mutableStateOf("") }
-    
+
+    LaunchedEffect(threadId) { threadViewModel.loadThread(threadId) }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            messageRepo.simulateSendMms(threadId, address, uri)
-        }
-    }
-
-    DisposableEffect(context, threadId) {
-        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                messages = messageRepo.fetchChatThread(threadId)
-            }
-        }
-        context.contentResolver.registerContentObserver(Uri.parse("content://mms-sms/conversations"), true, observer)
-        messages = messageRepo.fetchChatThread(threadId)
-        onDispose { context.contentResolver.unregisterContentObserver(observer) }
-    }
+    ) { uri -> if (uri != null) threadViewModel.sendMms(threadId, address, uri) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -457,25 +425,17 @@ fun ThreadScreen(modifier: Modifier = Modifier, threadId: Long, address: String,
         },
         bottomBar = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .navigationBarsPadding()
-                    .imePadding(),
+                modifier = Modifier.fillMaxWidth().padding(8.dp).navigationBarsPadding().imePadding(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { 
+                IconButton(onClick = {
                     photoPickerLauncher.launch(
                         androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     )
-                }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Attach File")
-                }
+                }) { Icon(Icons.Filled.Add, contentDescription = "Attach File") }
                 TextField(
-                    value = replyText,
-                    onValueChange = { replyText = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Text message") },
+                    value = replyText, onValueChange = { replyText = it },
+                    modifier = Modifier.weight(1f), placeholder = { Text("Text message") },
                     shape = RoundedCornerShape(24.dp),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = Color.Transparent,
@@ -489,7 +449,7 @@ fun ThreadScreen(modifier: Modifier = Modifier, threadId: Long, address: String,
                 IconButton(
                     onClick = {
                         if (replyText.isNotBlank()) {
-                            messageRepo.sendSmsMessage(address, replyText)
+                            threadViewModel.sendMessage(address, replyText)
                             Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
                             replyText = ""
                         }
@@ -502,14 +462,17 @@ fun ThreadScreen(modifier: Modifier = Modifier, threadId: Long, address: String,
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.padding(innerPadding).fillMaxSize().padding(horizontal = 16.dp),
             reverseLayout = true
         ) {
             items(messages) { msg ->
-                ChatBubble(msg, isTaggingEnabled, onTagClick)
+                ChatBubble(
+                    msg = msg,
+                    isTaggingEnabled = isTaggingEnabled,
+                    onTagClick = onTagClick,
+                    onTagsSaved = { id, tags -> threadViewModel.setTagsForMessage(id, tags) },
+                    onColorSaved = { id, hex -> threadViewModel.setMessageColor(id, hex) }
+                )
             }
         }
     }
@@ -540,7 +503,7 @@ fun NewMessageScreen(modifier: Modifier = Modifier, onNavigateBack: () -> Unit) 
     }
 
     LaunchedEffect(Unit) {
-        contacts = messageRepo.fetchContacts()
+        contacts = withContext(Dispatchers.IO) { messageRepo.fetchContacts() }
         try {
             val sm = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
             availableSims = sm.activeSubscriptionInfoList ?: emptyList()
@@ -691,7 +654,9 @@ fun TagFilterScreen(modifier: Modifier = Modifier, tag: String, onNavigateToThre
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     
     LaunchedEffect(tag) {
-        messages = messageRepo.fetchAllMessages().filter { it.tags.contains(tag) }
+        messages = withContext(Dispatchers.IO) {
+            messageRepo.fetchAllMessages().filter { it.tags.contains(tag) }
+        }
     }
     
     Scaffold(
@@ -722,7 +687,9 @@ fun MetricsBrowserScreen(modifier: Modifier, onBack: () -> Unit) {
     val repo = remember { MessageRepository(context) }
     val engine = remember { MetricsEngine() }
     var html by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) { html = engine.generateMetricsHtml(repo.fetchAllMessages()) }
+    LaunchedEffect(Unit) {
+        html = withContext(Dispatchers.IO) { engine.generateMetricsHtml(repo.fetchAllMessages()) }
+    }
     Scaffold(topBar = { TopAppBar(title = { Text("Metrics") }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { pad ->
         if (html.isNotEmpty()) AndroidView(factory = { WebView(it) }, Modifier.padding(pad).fillMaxSize()) { it.loadDataWithBaseURL(null, html, "text/html", "utf-8", null) }
     }
@@ -733,17 +700,20 @@ fun MetricsBrowserScreen(modifier: Modifier, onBack: () -> Unit) {
 fun SpamFolderScreen(modifier: Modifier = Modifier, onNavigateToThread: (Long, String) -> Unit, onNavigateBack: () -> Unit) {
     val context = LocalContext.current
     val messageRepo = remember { MessageRepository(context) }
+    val scope = rememberCoroutineScope()
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
-    var blockedSenders by remember { mutableStateOf<Set<String>>(emptySet()) }
-    
+
     fun refresh() {
-        val db = TagsDbHelper(context)
-        blockedSenders = db.getBlockedSenders()
-        messages = messageRepo.fetchAllMessages().filter { blockedSenders.contains(it.address) }
+        scope.launch {
+            val blocked = withContext(Dispatchers.IO) { messageRepo.getBlockedSenders() }
+            messages = withContext(Dispatchers.IO) {
+                messageRepo.fetchAllMessages().filter { blocked.contains(it.address) }
+            }
+        }
     }
 
     LaunchedEffect(Unit) { refresh() }
-    
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -765,15 +735,16 @@ fun SpamFolderScreen(modifier: Modifier = Modifier, onNavigateToThread: (Long, S
             LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
                 items(messages) { msg ->
                     InboxItem(
-                        msg = msg, 
-                        onClick = { onNavigateToThread(msg.threadId, msg.address) }, 
-                        onArchive = {}, 
-                        onBlock = {},
+                        msg = msg,
+                        onClick = { onNavigateToThread(msg.threadId, msg.address) },
+                        onArchive = {}, onBlock = {},
                         isSpamView = true,
                         onUnblock = {
-                            TagsDbHelper(context).removeBlockedSender(msg.address)
-                            refresh()
-                            Toast.makeText(context, "Marked as Not a Spam", Toast.LENGTH_SHORT).show()
+                            scope.launch {
+                                withContext(Dispatchers.IO) { messageRepo.removeBlockedSender(msg.address) }
+                                refresh()
+                                Toast.makeText(context, "Marked as Not a Spam", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     )
                 }
@@ -960,10 +931,15 @@ fun InboxItem(msg: ChatMessage, onClick: () -> Unit, onArchive: () -> Unit, onBl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatBubble(msg: ChatMessage, isTaggingEnabled: Boolean, onTagClick: (String) -> Unit) {
-    val context = LocalContext.current
+fun ChatBubble(
+    msg: ChatMessage,
+    isTaggingEnabled: Boolean,
+    onTagClick: (String) -> Unit,
+    onTagsSaved: (String, List<String>) -> Unit,
+    onColorSaved: (String, String?) -> Unit
+) {
     val alignment = if (msg.isSent) Alignment.CenterEnd else Alignment.CenterStart
-    
+
     var localTags by remember(msg) { mutableStateOf(msg.tags) }
     var localColorHex by remember(msg) { mutableStateOf(msg.colorHex) }
     var showDialog by remember { mutableStateOf(false) }
@@ -978,26 +954,21 @@ fun ChatBubble(msg: ChatMessage, isTaggingEnabled: Boolean, onTagClick: (String)
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text("Edit Tags") },
-            text = { 
+            text = {
                 OutlinedTextField(
-                    value = tagInput, 
-                    onValueChange = { tagInput = it },
-                    label = { Text("Tags (comma separated)") },
-                    singleLine = true
+                    value = tagInput, onValueChange = { tagInput = it },
+                    label = { Text("Tags (comma separated)") }, singleLine = true
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     val newTags = tagInput.split(",").map { it.trim() }.filter { it.isNotBlank() }
-                    val db = TagsDbHelper(context)
-                    db.setTagsForMessage(msg.id, newTags)
+                    onTagsSaved(msg.id, newTags)  // P2: through ViewModel, not TagsDbHelper
                     localTags = newTags
                     showDialog = false
                 }) { Text("Save") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } }
         )
     }
 
@@ -1010,16 +981,11 @@ fun ChatBubble(msg: ChatMessage, isTaggingEnabled: Boolean, onTagClick: (String)
                 Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                     presets.forEach { hex ->
                         val btnColor = hex?.let { Color(android.graphics.Color.parseColor(it)) } ?: MaterialTheme.colorScheme.surfaceVariant
-                        Box(modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(btnColor)
-                            .clickable {
-                                TagsDbHelper(context).setMessageColor(msg.id, hex)
-                                localColorHex = hex
-                                showColorDialog = false
-                            }
-                        )
+                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(btnColor).clickable {
+                            onColorSaved(msg.id, hex)  // P2: through ViewModel, not TagsDbHelper
+                            localColorHex = hex
+                            showColorDialog = false
+                        })
                     }
                 }
             },
@@ -1028,61 +994,37 @@ fun ChatBubble(msg: ChatMessage, isTaggingEnabled: Boolean, onTagClick: (String)
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         contentAlignment = alignment
     ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = bubbleColor,
-            modifier = Modifier.widthIn(max = 280.dp)
-        ) {
+        Surface(shape = RoundedCornerShape(16.dp), color = bubbleColor, modifier = Modifier.widthIn(max = 280.dp)) {
             Column(modifier = Modifier.padding(12.dp)) {
                 if (msg.attachmentUri != null) {
                     AsyncImage(
-                        model = Uri.parse(msg.attachmentUri),
-                        contentDescription = "MMS Attachment",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 200.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                        model = Uri.parse(msg.attachmentUri), contentDescription = "MMS Attachment",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop
                     )
                     if (msg.body.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
                 }
                 if (msg.body.isNotBlank()) {
-                    Text(
-                        text = msg.body,
-                        color = textColor,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    Text(text = msg.body, color = textColor, style = MaterialTheme.typography.bodyLarge)
                 }
-                
                 Row(
-                    modifier = Modifier.padding(top = 6.dp), 
+                    modifier = Modifier.padding(top = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
                     if (isTaggingEnabled) {
                         localTags.forEach { tag ->
-                            AssistChip(
-                                onClick = { onTagClick(tag) },
-                                label = { Text(tag, fontSize = 10.sp) },
-                                modifier = Modifier.padding(end = 4.dp).height(24.dp)
-                            )
+                            AssistChip(onClick = { onTagClick(tag) }, label = { Text(tag, fontSize = 10.sp) },
+                                modifier = Modifier.padding(end = 4.dp).height(24.dp))
                         }
-                        IconButton(
-                            onClick = { showDialog = true }, 
-                            modifier = Modifier.size(24.dp).padding(start = 2.dp)
-                        ) {
+                        IconButton(onClick = { showDialog = true }, modifier = Modifier.size(24.dp).padding(start = 2.dp)) {
                             Icon(Icons.Filled.LocalOffer, contentDescription = "Edit Tags", modifier = Modifier.size(16.dp), tint = textColor)
                         }
                     }
-                    IconButton(
-                        onClick = { showColorDialog = true }, 
-                        modifier = Modifier.size(24.dp).padding(start = 2.dp)
-                    ) {
+                    IconButton(onClick = { showColorDialog = true }, modifier = Modifier.size(24.dp).padding(start = 2.dp)) {
                         Icon(Icons.Filled.ColorLens, contentDescription = "Color", modifier = Modifier.size(16.dp), tint = textColor)
                     }
                 }
@@ -1091,15 +1033,31 @@ fun ChatBubble(msg: ChatMessage, isTaggingEnabled: Boolean, onTagClick: (String)
     }
 }
 
-fun backupToDrive(context: Context, account: GoogleSignInAccount, messages: List<ChatMessage>) {
+
+// P1: Uses OAuth access token from Identity.getAuthorizationClient instead of deprecated GoogleSignInAccount
+fun backupToDrive(context: Context, accessToken: String, messages: List<ChatMessage>) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val cred = GoogleAccountCredential.usingOAuth2(context, listOf(DriveScopes.DRIVE_FILE)).apply { selectedAccount = account.account }
-            val drive = Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance(), cred).setApplicationName("MessageMe").build()
+            val credential = Credential(BearerToken.authorizationHeaderAccessMethod()).apply {
+                this.accessToken = accessToken
+            }
+            val drive = Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance(), credential)
+                .setApplicationName("MessageMe").build()
             val xml = BackupEngine().generateBackupXml(messages)
-            val folder = drive.files().create(File().apply { name = "MessageMe_Backups"; mimeType = "application/vnd.google-apps.folder" }).setFields("id").execute()
-            drive.files().create(File().apply { name = "Backup_${System.currentTimeMillis()}.xml"; parents = listOf(folder.id) }, ByteArrayContent.fromString("text/xml", xml)).execute()
+            val folder = drive.files().create(
+                com.google.api.services.drive.model.File().apply {
+                    name = "MessageMe_Backups"; mimeType = "application/vnd.google-apps.folder"
+                }
+            ).setFields("id").execute()
+            drive.files().create(
+                com.google.api.services.drive.model.File().apply {
+                    name = "Backup_${System.currentTimeMillis()}.xml"; parents = listOf(folder.id)
+                },
+                ByteArrayContent.fromString("text/xml", xml)
+            ).execute()
             withContext(Dispatchers.Main) { Toast.makeText(context, "Backup Success", Toast.LENGTH_SHORT).show() }
-        } catch (e: Exception) { withContext(Dispatchers.Main) { Toast.makeText(context, "Backup Fail", Toast.LENGTH_SHORT).show() } }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) { Toast.makeText(context, "Backup Failed: ${e.message}", Toast.LENGTH_SHORT).show() }
+        }
     }
 }

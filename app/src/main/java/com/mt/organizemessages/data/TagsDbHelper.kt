@@ -4,7 +4,17 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class TagsDbHelper(context: Context) : SQLiteOpenHelper(context, "tags.db", null, 2) {
+class TagsDbHelper private constructor(context: Context) : SQLiteOpenHelper(context.applicationContext, "tags.db", null, 2) {
+
+    companion object {
+        @Volatile private var instance: TagsDbHelper? = null
+
+        fun getInstance(context: Context): TagsDbHelper =
+            instance ?: synchronized(this) {
+                instance ?: TagsDbHelper(context.applicationContext).also { instance = it }
+            }
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE message_tags (message_id TEXT PRIMARY KEY, tags TEXT)")
         db.execSQL("CREATE TABLE blocked_senders (address TEXT PRIMARY KEY)")

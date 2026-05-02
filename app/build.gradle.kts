@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.detekt)
     id("org.jetbrains.kotlinx.kover") version "0.8.3"
     id("jacoco")
 }
@@ -51,6 +52,8 @@ android {
     packaging {
         resources {
             excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/*.md"
         }
     }
 }
@@ -82,16 +85,21 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
     implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("com.google.android.gms:play-services-auth:21.0.0")
-    implementation("com.google.api-client:google-api-client-android:1.33.0")
-    implementation("com.google.api-client:google-api-client-gson:1.33.0")
-    implementation("com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation("com.google.android.gms:play-services-identity:18.1.0")
+
+    // Custom lint rules — enforces architectural patterns at build time
+    lintChecks(project(":lint-rules"))
+    implementation("com.google.api-client:google-api-client-android:2.7.2")
+    implementation("com.google.api-client:google-api-client-gson:2.7.2")
+    implementation("com.google.apis:google-api-services-drive:v3-rev20241206-2.0.0")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     
     testImplementation(libs.junit)
     testImplementation("io.mockk:mockk:1.13.10")
@@ -106,4 +114,12 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+detekt {
+    config.setFrom("$rootDir/detekt.yml")
+    buildUponDefaultConfig = true
+    allRules = false
+    // Set ignoreFailures = false in CI to hard-fail on violations
+    ignoreFailures = true
 }
