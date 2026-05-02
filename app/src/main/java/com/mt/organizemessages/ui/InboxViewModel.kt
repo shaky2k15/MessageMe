@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
  * [onCleared] — it must never be registered from a Composable.
  * See ADR-003.
  */
-class InboxViewModel(
+class InboxViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: MessageRepository = MessageRepository(application),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO

@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ThreadViewModel(
+class ThreadViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: MessageRepository = MessageRepository(application),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO

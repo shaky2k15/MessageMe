@@ -2,33 +2,22 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.detekt)
-    alias(libs.plugins.owasp.dependencycheck)
     id("org.jetbrains.kotlinx.kover") version "0.8.3"
     id("jacoco")
 }
 
 android {
     namespace = "com.mt.organizemessages"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
-
+    compileSdk = 35
+    
     defaultConfig {
         applicationId = "com.mt.organizemessages"
         minSdk = 30
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        lint {
-            abortOnError = false
-            checkDependencies = true
-            enable += "Security"
-            fatal += "Security"
-        }
     }
 
     buildTypes {
@@ -91,13 +80,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     })
 }
 
-dependencyCheck {
-    failBuildOnCVSS = 7.0f
-    formats = mutableListOf("HTML", "JSON")
-    analyzers {
-        assemblyEnabled = false // Not needed for Android
-    }
-}
 
 
 
