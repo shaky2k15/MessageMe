@@ -22,18 +22,19 @@ An advanced, power-user SMS/MMS client for Android built with Jetpack Compose an
 To view the current code coverage report:
 1. Run the following command in the terminal:
    ```bash
-   ./gradlew testDebugUnitTest koverHtmlReport
+   ./gradlew testDebugUnitTest jacocoTestReport
    ```
 2. Open the report in your browser:
    ```bash
-   open app/build/reports/kover/html/index.html
+   open app/build/reports/jacoco/jacocoTestReport/html/index.html
    ```
 
 ### 3. Agentic Automation
-This project uses **GitHub Actions** as an intelligent agent to:
-- Automatically run unit tests on every push.
-- Generate coverage reports using Kover.
-- Update the coverage badge in this README to reflect the current codebase health.
+This project uses **Antigravity Agents** to:
+- Automatically run unit tests and ensure >98% coverage.
+- Generate coverage reports using JaCoCo.
+- Maintain UI parity and architectural integrity.
+- Refer to the [Agentic Workflow Report](agents/workflow_report.md) for details on how this project was built.
 
 ## Best Practices
 Refer to [docs/best_practices.md](docs/best_practices.md) for a step-by-step guide on how this project was built and how to maintain high standards.

@@ -8,7 +8,6 @@ import android.provider.Telephony
 import android.telephony.SmsManager
 import com.mt.organizemessages.ChatMessage
 import com.mt.organizemessages.ContactInfo
-import com.mt.organizemessages.TagsDbHelper
 
 class MessageRepository(private val context: Context) {
 

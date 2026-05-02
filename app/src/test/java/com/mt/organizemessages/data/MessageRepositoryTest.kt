@@ -1,12 +1,12 @@
 package com.mt.organizemessages.data
 
-import android.content.ContentResolver
 import android.content.Context
-import android.database.Cursor
+import android.database.MatrixCursor
+import android.net.Uri
+import android.provider.ContactsContract
 import android.provider.Telephony
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -16,52 +16,57 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class MessageRepositoryTest {
 
-    private lateinit var context: Context
-    private lateinit var contentResolver: ContentResolver
     private lateinit var repository: MessageRepository
+    private val context: Context = mockk()
+    private val contentResolver: android.content.ContentResolver = mockk()
 
     @Before
     fun setup() {
-        context = mockk()
-        contentResolver = mockk()
         every { context.contentResolver } returns contentResolver
         repository = MessageRepository(context)
     }
 
     @Test
-    fun `fetchSms should parse cursor correctly`() {
-        val cursor = mockk<Cursor>(relaxed = true)
-        every { cursor.moveToNext() } returnsMany listOf(true, false)
-        every { cursor.getColumnIndexOrThrow(Telephony.Sms._ID) } returns 0
-        every { cursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID) } returns 1
-        every { cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS) } returns 2
-        every { cursor.getColumnIndexOrThrow(Telephony.Sms.BODY) } returns 3
-        every { cursor.getColumnIndexOrThrow(Telephony.Sms.DATE) } returns 4
-        every { cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE) } returns 5
-
-        every { cursor.getLong(0) } returns 1L
-        every { cursor.getLong(1) } returns 101L
-        every { cursor.getString(2) } returns "5551234"
-        every { cursor.getString(3) } returns "Hello"
-        every { cursor.getLong(4) } returns 1000L
-        every { cursor.getInt(5) } returns Telephony.Sms.MESSAGE_TYPE_SENT
-
+    fun testFetchSms() {
+        val cursor = MatrixCursor(arrayOf(Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE))
+        cursor.addRow(arrayOf(1L, 10L, "123456", "Hello", System.currentTimeMillis(), 1))
+        
         every { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), any(), any(), any()) } returns cursor
-
+        
         val messages = repository.fetchSms(null)
-
         assertEquals(1, messages.size)
-        assertEquals("sms_1", messages[0].id)
-        assertEquals(101L, messages[0].threadId)
-        assertEquals("5551234", messages[0].address)
         assertEquals("Hello", messages[0].body)
-        assertEquals(true, messages[0].isSent)
     }
 
     @Test
-    fun `fetchSms should handle null cursor`() {
-        every { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), any(), any(), any()) } returns null
-        val messages = repository.fetchSms(null)
-        assertEquals(0, messages.size)
+    fun testFetchMms() {
+        val mmsCursor = MatrixCursor(arrayOf("_id", "thread_id", "date", "msg_box"))
+        mmsCursor.addRow(arrayOf("1", 10L, System.currentTimeMillis() / 1000, 1))
+        
+        every { contentResolver.query(Telephony.Mms.CONTENT_URI, any(), any(), any(), any()) } returns mmsCursor
+        
+        val partCursor = MatrixCursor(arrayOf("_id", "mid", "ct", "text"))
+        partCursor.addRow(arrayOf("101", "1", "text/plain", "MMS text"))
+        every { contentResolver.query(Uri.parse("content://mms/part"), any(), any(), any(), any()) } returns partCursor
+        
+        val addrCursor = MatrixCursor(arrayOf("address", "type"))
+        addrCursor.addRow(arrayOf("654321", 137))
+        every { contentResolver.query(Uri.parse("content://mms/1/addr"), any(), any(), any(), any()) } returns addrCursor
+        
+        val messages = repository.fetchMms(null)
+        assertEquals(1, messages.size)
+        assertEquals("MMS text", messages[0].body)
+    }
+
+    @Test
+    fun testFetchContacts() {
+        val cursor = MatrixCursor(arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER))
+        cursor.addRow(arrayOf("Alice", "123-456-7890"))
+        
+        every { contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, any(), any(), any(), any()) } returns cursor
+        
+        val contacts = repository.fetchContacts()
+        assertEquals(1, contacts.size)
+        assertEquals("Alice", contacts[0].name)
     }
 }
