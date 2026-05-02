@@ -12,6 +12,11 @@ An advanced, power-user SMS/MMS client for Android built with Jetpack Compose an
 - **Cloud Backup**: Automated Google Drive backup in standard XML format.
 - **Metrics Dashboard**: Visual analytics of your messaging habits.
 
+## Compatibility
+- **Minimum Requirement**: Android 11.0 (API Level 30) or higher.
+- **Optimized For**: Android 16 (API Level 36) - Latest 2026 Release.
+- **Device Support**: Fully compatible with modern high-end devices like the Samsung S24/S25/S26 series, including support for Edge-to-Edge displays and the latest Notification Permission models.
+
 ## Developer Guide
 
 ### 1. Running the Project

@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
 import android.provider.Telephony
+import android.os.Build
 import android.telephony.SmsManager
 import com.mt.organizemessages.ChatMessage
 import com.mt.organizemessages.ContactInfo
@@ -172,10 +173,19 @@ class MessageRepository(private val context: Context) {
 
     fun sendSmsMessage(phoneNumber: String, message: String, subId: Int? = null) {
         try {
-            val smsManager = if (subId != null && subId != -1) {
-                context.getSystemService(SmsManager::class.java).createForSubscriptionId(subId)
+            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // API 31+ (Android 12+): use getSystemService — supports per-subscription
+                if (subId != null && subId != -1)
+                    context.getSystemService(SmsManager::class.java).createForSubscriptionId(subId)
+                else
+                    context.getSystemService(SmsManager::class.java)
             } else {
-                context.getSystemService(SmsManager::class.java)
+                // API 30 (Android 11): fall back to deprecated SmsManager.getDefault()
+                @Suppress("DEPRECATION")
+                if (subId != null && subId != -1)
+                    SmsManager.getDefault().createForSubscriptionId(subId)
+                else
+                    SmsManager.getDefault()
             }
             smsManager.sendTextMessage(phoneNumber, null, message, null, null)
         } catch (e: Exception) {
