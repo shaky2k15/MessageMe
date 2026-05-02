@@ -409,9 +409,37 @@ fun SpamFolderScreen(modifier: Modifier, onThread: (Long, String) -> Unit, onBac
     val context = LocalContext.current
     val repo = remember { MessageRepository(context) }
     var msgs by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
-    LaunchedEffect(Unit) { msgs = repo.fetchAllMessages().filter { TagsDbHelper(context).getBlockedSenders().contains(it.address) } }
+    
+    fun refresh() {
+        val db = TagsDbHelper(context)
+        msgs = repo.fetchAllMessages().filter { db.getBlockedSenders().contains(it.address) }
+    }
+    
+    LaunchedEffect(Unit) { refresh() }
+    
     Scaffold(topBar = { TopAppBar(title = { Text("Spam") }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { pad ->
-        LazyColumn(Modifier.padding(pad).fillMaxSize()) { items(msgs) { InboxItem(it, { onThread(it.threadId, it.address) }, {}, {}) } }
+        if (msgs.isEmpty()) {
+            Box(Modifier.padding(pad).fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No spam messages")
+            }
+        } else {
+            LazyColumn(Modifier.padding(pad).fillMaxSize()) { 
+                items(msgs) { msg -> 
+                    InboxItem(
+                        msg = msg, 
+                        onClick = { onThread(msg.threadId, msg.address) }, 
+                        onArchive = {}, 
+                        onBlock = {
+                            val db = TagsDbHelper(context)
+                            db.removeBlockedSender(msg.address)
+                            refresh()
+                            Toast.makeText(context, "Marked as Not Spam", Toast.LENGTH_SHORT).show()
+                        },
+                        blockIcon = Icons.Filled.CheckCircle
+                    ) 
+                } 
+            }
+        }
     }
 }
 
@@ -436,7 +464,7 @@ fun AboutScreen(modifier: Modifier, onBack: () -> Unit) {
 }
 
 @Composable
-fun InboxItem(msg: ChatMessage, onClick: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit) {
+fun InboxItem(msg: ChatMessage, onClick: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit, blockIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Filled.Block) {
     val bgColor = msg.colorHex?.let { Color(android.graphics.Color.parseColor(it)) } ?: Color.Transparent
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = if (bgColor != Color.Transparent) bgColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -444,7 +472,7 @@ fun InboxItem(msg: ChatMessage, onClick: () -> Unit, onArchive: () -> Unit, onBl
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) { Text(msg.address, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold); Text(msg.body, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall) }
             IconButton(onArchive) { Icon(Icons.Filled.CloudUpload, null, Modifier.size(20.dp)) }
-            IconButton(onBlock) { Icon(Icons.Filled.Block, null, Modifier.size(20.dp)) }
+            IconButton(onBlock) { Icon(blockIcon, null, Modifier.size(20.dp)) }
         }
     }
 }
