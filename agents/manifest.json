@@ -1,0 +1,31 @@
+{
+  "project": "MessageMe",
+  "version": "1.0.0",
+  "agents": [
+    {
+      "name": "Antigravity Primary",
+      "role": "Orchestrator",
+      "capabilities": ["Code Synthesis", "Architecture Design", "Refactoring"]
+    },
+    {
+      "name": "Planning Subagent",
+      "role": "Strategist",
+      "capabilities": ["Step-by-step logic", "Dependency mapping", "Implementation Planning"]
+    },
+    {
+      "name": "Browser Subagent",
+      "role": "Researcher",
+      "capabilities": ["Web Search", "UI Verification", "HTML Analysis"]
+    },
+    {
+      "name": "Execution Agent",
+      "role": "Integrator",
+      "capabilities": ["Terminal Operations", "Build Management", "VCS Control"]
+    }
+  ],
+  "agent_standards": {
+    "workflow": "Research-Plan-Execute-Verify",
+    "documentation": ["task.md", "implementation_plan.md", "walkthrough.md"],
+    "version_control": "Git"
+  }
+}
