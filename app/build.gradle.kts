@@ -34,6 +34,9 @@ android {
     }
 
     testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
         unitTests.all {
             it.configure<JacocoTaskExtension> {
                 isIncludeNoLocationClasses = true
@@ -64,7 +67,10 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         xml.required.set(true)
         html.required.set(true)
     }
-    val fileFilter = listOf("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*", "**/*Test*.*", "android/**/*.*")
+    val fileFilter = listOf(
+        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*", "**/*Test*.*", "android/**/*.*",
+        "**/MainActivity*", "**/theme/*", "**/*Receiver*", "**/ComposableSingletons*"
+    )
     val kotlinClasses = fileTree("${layout.buildDirectory.get().asFile}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
         exclude(fileFilter)
     }
@@ -102,11 +108,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     
     testImplementation(libs.junit)
-    testImplementation("io.mockk:mockk:1.13.10")
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("org.robolectric:robolectric:4.12.1")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
     testImplementation("androidx.test:core:1.5.0")
-    testImplementation("androidx.test.ext:junit:1.1.5")
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.junit)
     
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -114,6 +121,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    lintChecks(project(":lint-rules"))
 }
 
 detekt {

@@ -13,6 +13,12 @@ class TagsDbHelper private constructor(context: Context) : SQLiteOpenHelper(cont
             instance ?: synchronized(this) {
                 instance ?: TagsDbHelper(context.applicationContext).also { instance = it }
             }
+
+        /** Test-only method to clear the singleton instance */
+        internal fun resetInstance() {
+            instance?.close()
+            instance = null
+        }
     }
 
     override fun onCreate(db: SQLiteDatabase) {

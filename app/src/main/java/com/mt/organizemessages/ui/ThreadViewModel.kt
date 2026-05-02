@@ -8,15 +8,18 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mt.organizemessages.ChatMessage
 import com.mt.organizemessages.data.MessageRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ThreadViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = MessageRepository(application)
+class ThreadViewModel(
+    application: Application,
+    private val repository: MessageRepository = MessageRepository(application),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -37,32 +40,32 @@ class ThreadViewModel(application: Application) : AndroidViewModel(application) 
 
     fun loadThread(threadId: Long) {
         currentThreadId = threadId
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             _messages.value = repository.fetchChatThread(threadId)
         }
     }
 
     fun sendMessage(address: String, text: String, subId: Int? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             repository.sendSmsMessage(address, text, subId)
         }
     }
 
     fun sendMms(threadId: Long, address: String, imageUri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             repository.simulateSendMms(threadId, address, imageUri)
         }
     }
 
     fun setTagsForMessage(messageId: String, tags: List<String>) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             repository.setTagsForMessage(messageId, tags)
             if (currentThreadId != -1L) _messages.value = repository.fetchChatThread(currentThreadId)
         }
     }
 
     fun setMessageColor(messageId: String, colorHex: String?) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             repository.setMessageColor(messageId, colorHex)
         }
     }

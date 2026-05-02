@@ -5,9 +5,10 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.provider.ContactsContract
 import android.provider.Telephony
-import io.mockk.every
-import io.mockk.mockk
-import org.junit.Assert.assertEquals
+import androidx.test.core.app.ApplicationProvider
+import io.mockk.*
+import org.junit.After
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,13 +18,24 @@ import org.robolectric.RobolectricTestRunner
 class MessageRepositoryTest {
 
     private lateinit var repository: MessageRepository
-    private val context: Context = mockk()
+    private lateinit var context: Context
     private val contentResolver: android.content.ContentResolver = mockk()
+    private val db: TagsDbHelper = mockk(relaxed = true)
 
     @Before
     fun setup() {
+        context = mockk(relaxed = true)
         every { context.contentResolver } returns contentResolver
+        
+        mockkObject(TagsDbHelper.Companion)
+        every { TagsDbHelper.getInstance(any()) } returns db
+        
         repository = MessageRepository(context)
+    }
+
+    @After
+    fun tearDown() {
+        TagsDbHelper.resetInstance()
     }
 
     @Test
@@ -39,23 +51,25 @@ class MessageRepositoryTest {
     }
 
     @Test
-    fun testFetchMms() {
-        val mmsCursor = MatrixCursor(arrayOf("_id", "thread_id", "date", "msg_box"))
-        mmsCursor.addRow(arrayOf("1", 10L, System.currentTimeMillis() / 1000, 1))
+    fun testMetadataOperations() {
+        // Test Tags
+        repository.setTagsForMessage("msg1", listOf("work", "urgent"))
+        assertEquals(listOf("work", "urgent"), repository.getTagsForMessage("msg1"))
+        assertTrue(repository.getAllTags().contains("work"))
         
-        every { contentResolver.query(Telephony.Mms.CONTENT_URI, any(), any(), any(), any()) } returns mmsCursor
+        // Test Colors
+        repository.setMessageColor("msg1", "#FF0000")
+        assertEquals("#FF0000", repository.getMessageColor("msg1"))
         
-        val partCursor = MatrixCursor(arrayOf("_id", "mid", "ct", "text"))
-        partCursor.addRow(arrayOf("101", "1", "text/plain", "MMS text"))
-        every { contentResolver.query(Uri.parse("content://mms/part"), any(), any(), any(), any()) } returns partCursor
+        // Test Blocking
+        repository.setBlockedSender("12345")
+        assertTrue(repository.getBlockedSenders().contains("12345"))
+        repository.removeBlockedSender("12345")
+        assertFalse(repository.getBlockedSenders().contains("12345"))
         
-        val addrCursor = MatrixCursor(arrayOf("address", "type"))
-        addrCursor.addRow(arrayOf("654321", 137))
-        every { contentResolver.query(Uri.parse("content://mms/1/addr"), any(), any(), any(), any()) } returns addrCursor
-        
-        val messages = repository.fetchMms(null)
-        assertEquals(1, messages.size)
-        assertEquals("MMS text", messages[0].body)
+        // Test Archiving
+        repository.setArchivedThread(100L)
+        assertTrue(repository.getArchivedThreads().contains(100L))
     }
 
     @Test
@@ -68,5 +82,102 @@ class MessageRepositoryTest {
         val contacts = repository.fetchContacts()
         assertEquals(1, contacts.size)
         assertEquals("Alice", contacts[0].name)
+    }
+    
+    @Test
+    fun testFetchAllMessagesCombinesSmsAndMms() {
+        // Mock SMS
+        val smsCursor = MatrixCursor(arrayOf(Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE))
+        smsCursor.addRow(arrayOf(1L, 10L, "123", "SMS", System.currentTimeMillis(), 1))
+        every { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), any(), any(), any()) } returns smsCursor
+        
+        // Mock MMS
+        val mmsCursor = MatrixCursor(arrayOf("_id", "thread_id", "date", "msg_box"))
+        mmsCursor.addRow(arrayOf("1", 11L, System.currentTimeMillis() / 1000, 1))
+        every { contentResolver.query(Telephony.Mms.CONTENT_URI, any(), any(), any(), any()) } returns mmsCursor
+        
+        // Mock MMS part
+        val partCursor = MatrixCursor(arrayOf("_id", "mid", "ct", "text"))
+        partCursor.addRow(arrayOf("101", "1", "text/plain", "MMS"))
+        every { contentResolver.query(Uri.parse("content://mms/part"), any(), any(), any(), any()) } returns partCursor
+        
+        // Mock MMS addr
+        val addrCursor = MatrixCursor(arrayOf("address", "type"))
+        addrCursor.addRow(arrayOf("456", 137))
+        every { contentResolver.query(Uri.parse("content://mms/1/addr"), any(), any(), any(), any()) } returns addrCursor
+        
+        val allMessages = repository.fetchAllMessages()
+        assertEquals(2, allMessages.size)
+    }
+
+    @Test
+    fun testSendSms() {
+        val smsManager = mockk<android.telephony.SmsManager>(relaxed = true)
+        every { context.getSystemService(android.telephony.SmsManager::class.java) } returns smsManager
+        
+        // Test with default subId
+        repository.sendSmsMessage("123", "Hello")
+        verify { smsManager.sendTextMessage("123", null, "Hello", null, null) }
+        
+        // Test with specific subId
+        val subSmsManager = mockk<android.telephony.SmsManager>(relaxed = true)
+        every { smsManager.createForSubscriptionId(1) } returns subSmsManager
+        repository.sendSmsMessage("123", "Hello", 1)
+        verify { subSmsManager.sendTextMessage("123", null, "Hello", null, null) }
+    }
+
+    @Test
+    fun testSimulateSendMms() {
+        val uri = mockk<Uri>()
+        repository.simulateSendMms(100L, "456", uri)
+        // Should not crash, verifying it doesn't fail
+    }
+
+    @Test
+    fun testFetchAllMessagesEmpty() {
+        every { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), any(), any(), any()) } returns null
+        every { contentResolver.query(Telephony.Mms.CONTENT_URI, any(), any(), any(), any()) } returns null
+        
+        val all = repository.fetchAllMessages()
+        assertTrue(all.isEmpty())
+    }
+
+    @Test
+    fun testFetchSmsWithThreadId() {
+        val cursor = MatrixCursor(arrayOf(Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE))
+        cursor.addRow(arrayOf(1L, 10L, "123", "Body", 0L, 1))
+        every { contentResolver.query(any(), any(), match { it?.contains("thread_id = ?") == true }, any(), any()) } returns cursor
+        
+        val msgs = repository.fetchSms(10L)
+        assertEquals(1, msgs.size)
+        verify { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), match { it?.contains("thread_id = ?") == true }, arrayOf("10"), any()) }
+    }
+
+    @Test
+    fun testFetchMmsWithThreadId() {
+        val cursor = MatrixCursor(arrayOf("_id", "thread_id", "date", "msg_box"))
+        cursor.addRow(arrayOf("1", 10L, 0L, 1))
+        every { contentResolver.query(Telephony.Mms.CONTENT_URI, any(), match { it?.contains("thread_id = ?") == true }, any(), any()) } returns cursor
+        every { contentResolver.query(Uri.parse("content://mms/part"), any(), any(), any(), any()) } returns null
+        every { contentResolver.query(Uri.parse("content://mms/1/addr"), any(), any(), any(), any()) } returns null
+        
+        val msgs = repository.fetchMms(10L)
+        assertEquals(1, msgs.size)
+    }
+
+    @Test
+    fun testGetMessageMetadata() {
+        every { db.getAllTagsMap() } returns mapOf("1" to listOf("tag"))
+        every { db.getAllMessageColorsMap() } returns mapOf("1" to "#FFF")
+        
+        assertEquals(listOf("tag"), repository.getTagsForMessage("1"))
+        assertEquals("#FFF", repository.getMessageColor("1"))
+    }
+
+    @Test
+    fun testGetAllTags() {
+        every { db.getAllTagsMap() } returns mapOf("1" to listOf("tagB", "tagA"), "2" to listOf("tagA", "tagC"))
+        val allTags = repository.getAllTags()
+        assertEquals(listOf("tagA", "tagB", "tagC"), allTags)
     }
 }

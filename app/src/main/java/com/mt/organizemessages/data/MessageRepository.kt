@@ -214,6 +214,14 @@ class MessageRepository(private val context: Context) {
     fun getAllTags(): List<String> =
         db.getAllTagsMap().values.flatten().distinct().filter { it.isNotBlank() }.sorted()
 
+    /** Returns the list of tags associated with [messageId]. */
+    fun getTagsForMessage(messageId: String): List<String> =
+        db.getAllTagsMap()[messageId] ?: emptyList()
+
+    /** Returns the hex color string for [messageId], or null if default. */
+    fun getMessageColor(messageId: String): String? =
+        db.getAllMessageColorsMap()[messageId]
+
     // ── Write: Tags / Metadata ───────────────────────────────────────────────
 
     /**

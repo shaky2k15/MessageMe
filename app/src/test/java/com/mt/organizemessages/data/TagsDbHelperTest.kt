@@ -1,7 +1,9 @@
 package com.mt.organizemessages.data
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -18,12 +20,14 @@ class TagsDbHelperTest {
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        dbHelper = TagsDbHelper(context)
+        TagsDbHelper.resetInstance()
+        dbHelper = TagsDbHelper.getInstance(context)
     }
 
     @After
     fun tearDown() {
         dbHelper.close()
+        TagsDbHelper.resetInstance()
         context.deleteDatabase("tags.db")
     }
 
@@ -40,31 +44,42 @@ class TagsDbHelperTest {
 
     @Test
     fun testBlockedSenders() {
-        val sender = "1234567890"
+        val address = "123456"
+        dbHelper.setBlockedSender(address)
+        assertTrue(dbHelper.getBlockedSenders().contains(address))
         
-        dbHelper.setBlockedSender(sender)
-        assertTrue(dbHelper.getBlockedSenders().contains(sender))
-        
-        dbHelper.removeBlockedSender(sender)
-        assertFalse(dbHelper.getBlockedSenders().contains(sender))
+        dbHelper.removeBlockedSender(address)
+        assertFalse(dbHelper.getBlockedSenders().contains(address))
     }
 
     @Test
     fun testArchivedThreads() {
-        val threadId = 123L
-        
+        val threadId = 100L
         dbHelper.setArchivedThread(threadId)
         assertTrue(dbHelper.getArchivedThreads().contains(threadId))
     }
 
     @Test
     fun testMessageColors() {
-        val messageId = "msg1"
-        val color = "#FF0000"
-        
+        val messageId = "msg2"
+        val color = "#FF5722"
         dbHelper.setMessageColor(messageId, color)
         val colorsMap = dbHelper.getAllMessageColorsMap()
         
         assertEquals(color, colorsMap[messageId])
+    }
+
+    @Test
+    fun testOnCreate() {
+        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
+        dbHelper.onCreate(mockDb)
+        verify { mockDb.execSQL(any()) }
+    }
+
+    @Test
+    fun testOnUpgrade() {
+        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
+        dbHelper.onUpgrade(mockDb, 1, 2)
+        verify { mockDb.execSQL(any()) }
     }
 }

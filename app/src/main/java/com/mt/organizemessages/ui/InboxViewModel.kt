@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mt.organizemessages.ChatMessage
 import com.mt.organizemessages.data.MessageRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,15 +20,17 @@ import kotlinx.coroutines.withContext
  * ViewModel for [com.mt.organizemessages.MainSmsScreen].
  *
  * Owns all inbox state as [kotlinx.coroutines.flow.StateFlow]s. All data
- * fetching runs on [kotlinx.coroutines.Dispatchers.IO] via [viewModelScope].
+ * fetching runs on [ioDispatcher] via [viewModelScope].
  *
  * The [ContentObserver] is registered once in [init] and cleaned up in
  * [onCleared] — it must never be registered from a Composable.
  * See ADR-003.
  */
-class InboxViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = MessageRepository(application)
+class InboxViewModel(
+    application: Application,
+    private val repository: MessageRepository = MessageRepository(application),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
     /** Live inbox messages — one entry per thread, newest first. */
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -60,14 +63,14 @@ class InboxViewModel(application: Application) : AndroidViewModel(application) {
         // Refresh allTags whenever a tag is saved anywhere (e.g. from ThreadScreen)
         viewModelScope.launch {
             MessageRepository.tagsChanged.collect {
-                _allTags.value = withContext(Dispatchers.IO) { repository.getAllTags() }
+                _allTags.value = withContext(ioDispatcher) { repository.getAllTags() }
             }
         }
     }
 
-    /** Reloads all inbox state from [MessageRepository] on [kotlinx.coroutines.Dispatchers.IO]. */
+    /** Reloads all inbox state from [MessageRepository] on [ioDispatcher]. */
     fun loadData() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val blocked = repository.getBlockedSenders()
             val archived = repository.getArchivedThreads()
             val msgs = repository.fetchAllMessages()
@@ -81,10 +84,10 @@ class InboxViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Archives [threadId] so it no longer appears in the inbox.
-     * Persists via [MessageRepository.setArchivedThread] on [kotlinx.coroutines.Dispatchers.IO].
+     * Persists via [MessageRepository.setArchivedThread] on [ioDispatcher].
      */
     fun archiveThread(threadId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             repository.setArchivedThread(threadId)
             _archivedThreads.value = repository.getArchivedThreads()
         }
@@ -92,10 +95,10 @@ class InboxViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Adds [address] to the blocked senders list and refreshes all inbox state.
-     * Persists via [MessageRepository.setBlockedSender] on [kotlinx.coroutines.Dispatchers.IO].
+     * Persists via [MessageRepository.setBlockedSender] on [ioDispatcher].
      */
     fun blockSender(address: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             repository.setBlockedSender(address)
             _blockedSenders.value = repository.getBlockedSenders()
             loadData()
