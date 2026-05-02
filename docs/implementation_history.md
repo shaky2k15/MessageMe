@@ -32,6 +32,19 @@ This document tracks the evolution of the MessageMe app from a basic SMS client 
 - **Requirement:** Rename "Send SMS" to "Send".
 - **Implementation:** Updated button text and added a send icon.
 
+## Phase 5: Architectural Modernization & Governance (May 2026)
+- **Requirement:** Resolve high-risk legacy Auth and UI-thread dependencies.
+- **Implementation:** 
+    - Migrated UI state management from monolithic `MainActivity` to lifecycle-aware `InboxViewModel` and `ThreadViewModel`.
+    - Introduced `MessageRepository` as the single source of truth, offloading all database and ContentResolver I/O to `Dispatchers.IO`.
+    - Implemented a thread-safe Singleton pattern for `TagsDbHelper` to prevent connection leaks.
+    - Successfully replaced deprecated `GoogleSignIn` with modern `Identity.getAuthorizationClient` for Google Drive backup authentication.
+- **Requirement:** Ensure future architectural scalability and prevent regression.
+- **Implementation:**
+    - Established a **Governance Framework** including Custom Android Lint rules to block direct DB access from the UI.
+    - Integrated **Detekt** for static analysis and **GitHub Actions** for CI/CD gates.
+    - Documented all major technical shifts via **Architecture Decision Records (ADRs)**.
+
 ## Project Origin
 - **User:** shaky2k15
 - **Developer AI:** Antigravity (Google DeepMind)
