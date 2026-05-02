@@ -38,5 +38,9 @@ This project uses **GitHub Actions** as an intelligent agent to:
 ## Best Practices
 Refer to [docs/best_practices.md](docs/best_practices.md) for a step-by-step guide on how this project was built and how to maintain high standards.
 
+## Contributors
+- **[shaky2k15](https://github.com/shaky2k15)** - Lead Developer & Product Vision
+- **Antigravity** - Agentic AI Coding Assistant
+
 ## License
 MIT
