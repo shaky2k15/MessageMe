@@ -17,11 +17,31 @@ An advanced, power-user SMS/MMS client for Android built with Jetpack Compose an
 - **Optimized For**: Android 16 (API Level 36) - Latest 2026 Release.
 - **Device Support**: Fully compatible with modern high-end devices like the Samsung S24/S25/S26 series, including support for Edge-to-Edge displays and the latest Notification Permission models.
 
+## Architecture Overview
+This project follows a modern, reactive Android architecture:
+- **UI Layer**: Jetpack Compose using `AndroidViewModel` for lifecycle-aware state management.
+- **Domain Layer**: Repository pattern using `MessageRepository` as the single source of truth.
+- **Data Layer**: Direct SMS/MMS ContentProvider access + a private Singleton SQLite database (`TagsDbHelper`) for metadata.
+- **Authentication**: Migrated to modern `Identity.getAuthorizationClient` for Google Drive access.
+
+Refer to our [Architecture Decisions (ADRs)](docs/decisions/) for detailed technical rationale.
+
+## Governance & Standards
+To ensure scalability and maintain code quality, the following tools are integrated into the build:
+- **Custom Lint Rules**: Prevents architectural violations like direct DB access from the UI.
+- **Detekt**: Static analysis for code smells and complexity.
+- **CI/CD**: GitHub Actions pipeline enforcing build, lint, and test success.
+- **PR Template**: Mandatory checklist for architectural compliance.
+
 ## Developer Guide
 
-### 1. Running the Project
-- Open in Android Studio.
-- Ensure you have a Google Cloud project set up for Drive API if you want to test backups.
+### 1. Verification & Quality
+Run the following commands to ensure your changes meet the project standards:
+```bash
+./gradlew lint        # Checks custom architectural rules
+./gradlew detekt      # Runs static analysis
+./gradlew test        # Runs unit tests
+```
 
 ### 2. Code Coverage
 To view the current code coverage report:
@@ -35,11 +55,7 @@ To view the current code coverage report:
    ```
 
 ### 3. Agentic Automation
-This project uses **Antigravity Agents** to:
-- Automatically run unit tests and ensure >98% coverage.
-- Generate coverage reports using JaCoCo.
-- Maintain UI parity and architectural integrity.
-- Refer to the [Agentic Workflow Report](agents/workflow_report.md) for details on how this project was built.
+This project is built and maintained with **Antigravity**. Refer to the [Skill Guide](docs/skill_guide.md) for the prompts and architectural patterns used to automate this project's evolution.
 
 ## Best Practices
 Refer to [docs/best_practices.md](docs/best_practices.md) for a step-by-step guide on how this project was built and how to maintain high standards.

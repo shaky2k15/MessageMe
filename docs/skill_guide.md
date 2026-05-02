@@ -1,39 +1,33 @@
-# MessageMe Skill Guide for AI Agents
+# MessageMe — Agentic Skill Guide
 
-This document provides context and "skills" for AI coding assistants to manage and extend the MessageMe project.
+This guide documents the specific agentic workflows and prompt engineering skills used by the Engineering Manager to guide Antigravity through the MessageMe modernization.
 
-## Project Essence
-MessageMe is a feature-rich Android SMS/MMS client focused on power-user features: metadata tagging, parallel persistence (SQLite), cloud backup (Google Drive), and multi-SIM management.
+## 1. Architectural Reasoning & Planning
+Instead of asking for code fixes, we used **Planning Mode** to establish a technical contract.
+- **Pattern**: "Run a scalability analysis and categorize risks into P1 (breaks soon) and P2 (architecture debt)."
+- **Outcome**: Identified the deprecated Google Sign-In and Main-thread SQLite leaks before they caused production issues.
 
-## Core Architecture Knowledge
-- **Main Logic:** Contained almost entirely in `MainActivity.kt` (for now).
-- **Data Persistence:**
-  - **System Provider:** Standard SMS/MMS storage.
-  - **Private DB (`tags.db`):** Managed by `TagsDbHelper`. Stores tags, blocklists, archives, and per-message colors.
-- **State Management:** Uses Jetpack Compose state hoisting in `SmsAppContent`.
+## 2. Governance through Automation
+We moved beyond "telling" developers what to do and started "enforcing" via code.
+- **Skill**: Building custom Android Lint detectors using AI.
+- **Pattern**: "Write a Lint detector that flags any direct access to TagsDbHelper outside the data package."
+- **Outcome**: Automated code reviews for the most common architectural violation in the project.
 
-## Available Skills (Standard Patterns)
+## 3. Handling API Deprecations (Auth & identity)
+Migrating auth flows is high-risk. We used Antigravity to map the old legacy classes to modern Identity equivalents.
+- **Skill**: Cross-library mapping.
+- **Pattern**: "Replace GoogleSignInClient with Identity.getAuthorizationClient and migrate the backupToDrive logic to use the raw accessToken."
+- **Outcome**: Successfully modernized the Google Drive engine without breaking the existing OAuth client configuration.
 
-### 1. Extending Message Metadata
-To add a new attribute (e.g., "Priority" or "Reminder"):
-1.  Update `ChatMessage` data class.
-2.  Update `TagsDbHelper` to create a new table/column.
-3.  Implement CRUD methods in `TagsDbHelper`.
-4.  Update `MainSmsScreen` or `ThreadScreen` to display/edit the new metadata.
+## 4. Reactive UI Patterns
+Moving from `remember {}` to ViewModels required a holistic view of the application lifecycle.
+- **Skill**: StateFlow orchestration.
+- **Pattern**: "Centralize all screen state in ViewModels and use a companion-object SharedFlow to signal tag updates across screens."
+- **Outcome**: Achieved visual parity with the legacy app while gaining rotation-safe state and reactive cross-screen updates.
 
-### 2. Modifying Cloud Backup
-The backup engine uses `Google Drive REST API`.
-- **Interoperability:** Ensure custom metadata is serialized as XML attributes (e.g., `tags="work,urgent"`) to maintain compatibility with "SMS Backup & Restore".
+---
 
-### 3. Handling Multi-SIM
-- Use `SubscriptionManager` to retrieve active subscriptions.
-- Use `SmsManager.getSmsManagerForSubscriptionId(subId)` for outgoing messages.
-- Permission required: `READ_PHONE_STATE`.
-
-## Common Pitfalls
-- **Permissions:** Always check for `READ_SMS`, `SEND_SMS`, `READ_CONTACTS`, and `READ_PHONE_STATE`.
-- **Default App Status:** Many features only work if MessageMe is the **Default SMS App**.
-- **Real-time Updates:** Use `ContentObserver` on `content://mms-sms/conversations` to keep the UI in sync with the system database.
-
-## Future Refactoring Target
-The project is currently monolithic. Future agents should prioritize moving UI components and data layers into separate files/modules.
+## Skills Reusable for Future Projects
+1. **ADR-First Development**: Always generate an Architecture Decision Record (ADR) before implementing a major pattern change.
+2. **Lint-as-Review**: Encode architectural boundaries into Lint rules to reduce PR review cycles.
+3. **Dispatcher Enforcement**: Explicitly audit all ContentResolver calls for `withContext(Dispatchers.IO)`.
