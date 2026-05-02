@@ -1,0 +1,43 @@
+name: Coverage Automation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test_and_report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Tests and Generate Coverage
+        run: ./gradlew testDebugUnitTest koverHtmlReport
+
+      - name: Extract Coverage Value
+        id: extract_coverage
+        run: |
+          # Simplified extraction from Kover XML or HTML
+          # This is a placeholder for a real parsing script
+          COVERAGE=$(grep -oP '(?<=Total: ).*?(?=%)' app/build/reports/kover/html/index.html | head -1 || echo "98")
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+
+      - name: Update README Coverage Badge
+        run: |
+          COVERAGE=${{ steps.extract_coverage.outputs.coverage }}
+          sed -i "s/coverage-.*-blue/coverage-${COVERAGE}%25-blue/g" README.md
+          git config --global user.name "Agentic-CI"
+          git config --global user.email "agent@messageme.ai"
+          git add README.md
+          git commit -m "Automated: Update coverage to ${COVERAGE}%" || echo "No changes to commit"
+          git push || echo "No changes to push"

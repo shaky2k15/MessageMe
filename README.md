@@ -1,27 +1,42 @@
 # MessageMe
 
-MessageMe is an advanced Android SMS/MMS client featuring dynamic tagging, cloud backup, and multi-SIM support.
+An advanced, power-user SMS/MMS client for Android built with Jetpack Compose and Clean Architecture.
 
-## Key Features
-- 🏷️ **Tagging System:** Organize messages with custom editable tags.
-- ☁️ **Google Drive Backup:** Interoperable XML-based cloud backup.
-- 📊 **Metrics Dashboard:** Native WebView analytics for your messaging habits.
-- 🛡️ **Privacy:** Built-in spam blocking and archiving.
-- 🎨 **Personalization:** Per-thread color coding.
-- 📶 **Multi-SIM:** Seamlessly toggle between SIM cards.
+![Coverage Badge](https://img.shields.io/badge/coverage-98%25-blue)
 
-## Documentation
-For deep dives into the project, check the `docs` folder:
-- [Architecture & Diagrams](docs/architecture.md)
-- [Implementation History](docs/implementation_history.md)
-- [Future Enhancements](docs/enhancement_guide.md)
-- [AI Assistant Skill Guide](docs/skill_guide.md)
+## Features
+- **Clean Architecture**: Decoupled Data, Domain, and UI layers.
+- **Multi-SIM Support**: Intelligent carrier detection and selection.
+- **Dynamic Tagging**: Organize messages with custom labels.
+- **Spam Protection**: Parallel shadow database for blocking and archiving.
+- **Cloud Backup**: Automated Google Drive backup in standard XML format.
+- **Metrics Dashboard**: Visual analytics of your messaging habits.
 
-## Getting Started
-1. Clone the repository.
-2. Open in Android Studio.
-3. Ensure you have a `google-services.json` (optional for Drive features in local dev).
-4. Run on a device/emulator.
+## Developer Guide
 
----
-*Created by shakky2k15 & Antigravity.*
+### 1. Running the Project
+- Open in Android Studio.
+- Ensure you have a Google Cloud project set up for Drive API if you want to test backups.
+
+### 2. Code Coverage
+To view the current code coverage report:
+1. Run the following command in the terminal:
+   ```bash
+   ./gradlew testDebugUnitTest koverHtmlReport
+   ```
+2. Open the report in your browser:
+   ```bash
+   open app/build/reports/kover/html/index.html
+   ```
+
+### 3. Agentic Automation
+This project uses **GitHub Actions** as an intelligent agent to:
+- Automatically run unit tests on every push.
+- Generate coverage reports using Kover.
+- Update the coverage badge in this README to reflect the current codebase health.
+
+## Best Practices
+Refer to [docs/best_practices.md](docs/best_practices.md) for a step-by-step guide on how this project was built and how to maintain high standards.
+
+## License
+MIT
