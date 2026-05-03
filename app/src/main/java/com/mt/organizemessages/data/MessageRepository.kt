@@ -273,7 +273,7 @@ class MessageRepository(private val context: Context) {
             } else {
                 @Suppress("DEPRECATION")
                 if (subId != null && subId != -1)
-                    SmsManager.getDefault().createForSubscriptionId(subId)
+                    SmsManager.getSmsManagerForSubscriptionId(subId)
                 else
                     SmsManager.getDefault()
             }
