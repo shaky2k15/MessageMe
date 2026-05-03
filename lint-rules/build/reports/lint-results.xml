@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.2.0">
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of com.android.tools.lint:lint-api than 31.10.0 is available: 32.2.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="    compileOnly(&quot;com.android.tools.lint:lint-api:31.10.0&quot;)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts"
+            line="11"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of com.android.tools.lint:lint-checks than 31.10.0 is available: 32.2.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="    compileOnly(&quot;com.android.tools.lint:lint-checks:31.10.0&quot;)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts"
+            line="12"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        severity="Warning"
+        message="Use version catalog instead"
+        category="Productivity"
+        priority="4"
+        summary="Use TOML Version Catalog Instead"
+        explanation="If your project is using a `libs.versions.toml` file, you should place all Gradle dependencies in the TOML file. This lint check looks for version declarations outside of the TOML file and suggests moving them (and in the IDE, provides a quickfix to performing the operation automatically)."
+        errorLine1="    compileOnly(&quot;com.android.tools.lint:lint-api:31.10.0&quot;)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts"
+            line="11"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        severity="Warning"
+        message="Use version catalog instead"
+        category="Productivity"
+        priority="4"
+        summary="Use TOML Version Catalog Instead"
+        explanation="If your project is using a `libs.versions.toml` file, you should place all Gradle dependencies in the TOML file. This lint check looks for version declarations outside of the TOML file and suggests moving them (and in the IDE, provides a quickfix to performing the operation automatically)."
+        errorLine1="    compileOnly(&quot;com.android.tools.lint:lint-checks:31.10.0&quot;)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts"
+            line="12"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="LintImplTextFormat"
+        severity="Warning"
+        message="Multi-line issue explanation strings will interpret line separators as hard breaks, and this looks like a continuation of the same paragraph. Consider using \ at the end of the previous line to indicate that the lines should be joined, or add a blank line between unrelated sentences, or suppress this issue type here."
+        category="Lint Implementation Issues"
+        priority="6"
+        summary="Lint Text Format"
+        explanation="Lint supports various markdown like formatting directives in all of its strings (issue explanations, reported error messages, etc).&#xA;&#xA;This lint check looks for strings that look like they may benefit from additional formatting. For example, if a snippet looks like code it should be surrounded with backticks.&#xA;&#xA;Note: Be careful changing **existing** strings; this may stop baseline file matching from working, so consider suppressing existing violations of this check if this is an error many users may be filtering in baselines. (This is only an issue for strings used in `report` calls; for issue registration strings like summaries and explanations there&apos;s no risk changing the text contents.)"
+        errorLine1="                ContentResolver.query(), readableDatabase, and writableDatabase are blocking calls."
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/MainThreadIoDetector.kt"
+            line="30"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="LintImplTextFormat"
+        severity="Warning"
+        message="&quot;TagsDbHelper&quot; looks like a code reference; surround with backtics in string to display as symbol, e.g. \`TagsDbHelper\`"
+        category="Lint Implementation Issues"
+        priority="6"
+        summary="Lint Text Format"
+        explanation="Lint supports various markdown like formatting directives in all of its strings (issue explanations, reported error messages, etc).&#xA;&#xA;This lint check looks for strings that look like they may benefit from additional formatting. For example, if a snippet looks like code it should be surrounded with backticks.&#xA;&#xA;Note: Be careful changing **existing** strings; this may stop baseline file matching from working, so consider suppressing existing violations of this check if this is an error many users may be filtering in baselines. (This is only an issue for strings used in `report` calls; for issue registration strings like summaries and explanations there&apos;s no risk changing the text contents.)"
+        errorLine1="                TagsDbHelper must only be accessed through MessageRepository (ADR-001)."
+        errorLine2="                ~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/TagsDbHelperDirectAccessDetector.kt"
+            line="30"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="LintImplTextFormat"
+        severity="Warning"
+        message="Multi-line issue explanation strings will interpret line separators as hard breaks, and this looks like a continuation of the same paragraph. Consider using \ at the end of the previous line to indicate that the lines should be joined, or add a blank line between unrelated sentences, or suppress this issue type here."
+        category="Lint Implementation Issues"
+        priority="6"
+        summary="Lint Text Format"
+        explanation="Lint supports various markdown like formatting directives in all of its strings (issue explanations, reported error messages, etc).&#xA;&#xA;This lint check looks for strings that look like they may benefit from additional formatting. For example, if a snippet looks like code it should be surrounded with backticks.&#xA;&#xA;Note: Be careful changing **existing** strings; this may stop baseline file matching from working, so consider suppressing existing violations of this check if this is an error many users may be filtering in baselines. (This is only an issue for strings used in `report` calls; for issue registration strings like summaries and explanations there&apos;s no risk changing the text contents.)"
+        errorLine1="                TagsDbHelper must only be accessed through MessageRepository (ADR-001)."
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/TagsDbHelperDirectAccessDetector.kt"
+            line="30"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="UElementAsPsi"
+        severity="Warning"
+        message="Do not use `UElement` as `PsiElement`"
+        category="Lint Implementation Issues"
+        priority="4"
+        summary="Avoid using UElement as PsiElement"
+        explanation="Avoid using UAST element as PSI element. If you need to utilize PSI APIs, retrieve the underlying `javaPsi` explicitly. If you need to analyze language-specific information, access `sourcePsi`."
+        errorLine1="                        val annotations = parent.annotations"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/MainThreadIoDetector.kt"
+            line="83"
+            column="43"/>
+    </issue>
+
+</issues>

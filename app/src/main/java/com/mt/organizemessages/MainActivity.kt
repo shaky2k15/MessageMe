@@ -255,7 +255,14 @@ fun MainSmsScreen(
             try {
                 val authResult = Identity.getAuthorizationClient(context)
                     .getAuthorizationResultFromIntent(result.data!!)
-                authResult.accessToken?.let { backupToDrive(context, it, messages) }
+                authResult.accessToken?.let { token ->
+                    scope.launch {
+                        val allMessages = withContext(Dispatchers.IO) {
+                            MessageRepository(context).fetchAllMessages(groupedByThread = false)
+                        }
+                        backupToDrive(context, token, allMessages)
+                    }
+                }
             } catch (e: Exception) {
                 Toast.makeText(context, "Auth Failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -336,7 +343,13 @@ fun MainSmsScreen(
                                                 )
                                             } else {
                                                 authResult.accessToken?.let {
-                                                    backupToDrive(context, it, messages)
+                                                    // P1: Fetch all messages for backup, not just thread headers
+                                                    scope.launch {
+                                                        val allMessages = withContext(Dispatchers.IO) {
+                                                            MessageRepository(context).fetchAllMessages(groupedByThread = false)
+                                                        }
+                                                        backupToDrive(context, it, allMessages)
+                                                    }
                                                 }
                                             }
                                         }
@@ -655,7 +668,7 @@ fun TagFilterScreen(modifier: Modifier = Modifier, tag: String, onNavigateToThre
     
     LaunchedEffect(tag) {
         messages = withContext(Dispatchers.IO) {
-            messageRepo.fetchAllMessages().filter { it.tags.contains(tag) }
+            messageRepo.fetchAllMessages(groupedByThread = false).filter { it.tags.contains(tag) }
         }
     }
     
@@ -688,7 +701,7 @@ fun MetricsBrowserScreen(modifier: Modifier, onBack: () -> Unit) {
     val engine = remember { MetricsEngine() }
     var html by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
-        html = withContext(Dispatchers.IO) { engine.generateMetricsHtml(repo.fetchAllMessages()) }
+        html = withContext(Dispatchers.IO) { engine.generateMetricsHtml(repo.fetchAllMessages(groupedByThread = false)) }
     }
     Scaffold(topBar = { TopAppBar(title = { Text("Metrics") }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { pad ->
         if (html.isNotEmpty()) AndroidView(factory = { WebView(it) }, Modifier.padding(pad).fillMaxSize()) { it.loadDataWithBaseURL(null, html, "text/html", "utf-8", null) }

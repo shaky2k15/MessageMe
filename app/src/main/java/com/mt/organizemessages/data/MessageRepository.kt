@@ -147,17 +147,18 @@ class MessageRepository(private val context: Context) {
     }
 
     /**
-     * Fetches all SMS and MMS messages, merges tag and color metadata, and
-     * returns one entry per thread (the most recent message per thread).
+     * Fetches all SMS and MMS messages and merges tag and color metadata.
      *
-     * This is the main data source for [com.mt.organizemessages.ui.InboxViewModel].
+     * @param groupedByThread If true (default), returns only the most recent message per thread.
+     *                        Used for the Inbox view. If false, returns all messages,
+     *                        used for Tag filtering, Metrics, and Backup.
      */
-    fun fetchAllMessages(): List<ChatMessage> {
+    fun fetchAllMessages(groupedByThread: Boolean = true): List<ChatMessage> {
         val allMsgs = (fetchSms(null) + fetchMms(null)).sortedByDescending { it.date }
         val tagsMap = db.getAllTagsMap()
         val colorsMap = db.getAllMessageColorsMap()
         allMsgs.forEach { it.tags = tagsMap[it.id] ?: emptyList(); it.colorHex = colorsMap[it.id] }
-        return allMsgs.distinctBy { it.threadId }
+        return if (groupedByThread) allMsgs.distinctBy { it.threadId } else allMsgs
     }
 
     /**

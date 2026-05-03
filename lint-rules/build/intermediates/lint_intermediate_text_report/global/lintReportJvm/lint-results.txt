@@ -1,0 +1,62 @@
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts:11: Warning: A newer version of com.android.tools.lint:lint-api than 31.10.0 is available: 32.2.0 [GradleDependency]
+    compileOnly("com.android.tools.lint:lint-api:31.10.0")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts:12: Warning: A newer version of com.android.tools.lint:lint-checks than 31.10.0 is available: 32.2.0 [GradleDependency]
+    compileOnly("com.android.tools.lint:lint-checks:31.10.0")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts:11: Warning: Use version catalog instead [UseTomlInstead]
+    compileOnly("com.android.tools.lint:lint-api:31.10.0")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/build.gradle.kts:12: Warning: Use version catalog instead [UseTomlInstead]
+    compileOnly("com.android.tools.lint:lint-checks:31.10.0")
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UseTomlInstead":
+   If your project is using a libs.versions.toml file, you should place all
+   Gradle dependencies in the TOML file. This lint check looks for version
+   declarations outside of the TOML file and suggests moving them (and in the
+   IDE, provides a quickfix to performing the operation automatically).
+
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/MainThreadIoDetector.kt:30: Warning: Multi-line issue explanation strings will interpret line separators as hard breaks, and this looks like a continuation of the same paragraph. Consider using  at the end of the previous line to indicate that the lines should be joined, or add a blank line between unrelated sentences, or suppress this issue type here. [LintImplTextFormat]
+                ContentResolver.query(), readableDatabase, and writableDatabase are blocking calls.
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/TagsDbHelperDirectAccessDetector.kt:30: Warning: "TagsDbHelper" looks like a code reference; surround with backtics in string to display as symbol, e.g. `TagsDbHelper` [LintImplTextFormat]
+                TagsDbHelper must only be accessed through MessageRepository (ADR-001).
+                ~~~~~~~~~~~~
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/TagsDbHelperDirectAccessDetector.kt:30: Warning: Multi-line issue explanation strings will interpret line separators as hard breaks, and this looks like a continuation of the same paragraph. Consider using  at the end of the previous line to indicate that the lines should be joined, or add a blank line between unrelated sentences, or suppress this issue type here. [LintImplTextFormat]
+                TagsDbHelper must only be accessed through MessageRepository (ADR-001).
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "LintImplTextFormat":
+   Lint supports various markdown like formatting directives in all of its
+   strings (issue explanations, reported error messages, etc).
+
+   This lint check looks for strings that look like they may benefit from
+   additional formatting. For example, if a snippet looks like code it should
+   be surrounded with backticks.
+
+   Note: Be careful changing existing strings; this may stop baseline file
+   matching from working, so consider suppressing existing violations of this
+   check if this is an error many users may be filtering in baselines. (This
+   is only an issue for strings used in report calls; for issue registration
+   strings like summaries and explanations there's no risk changing the text
+   contents.)
+
+/Users/sekhar/.gemini/antigravity/scratch/MessageMe/lint-rules/src/main/java/com/mt/organizemessages/lint/MainThreadIoDetector.kt:83: Warning: Do not use UElement as PsiElement [UElementAsPsi]
+                        val annotations = parent.annotations
+                                          ~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UElementAsPsi":
+   Avoid using UAST element as PSI element. If you need to utilize PSI APIs,
+   retrieve the underlying javaPsi explicitly. If you need to analyze
+   language-specific information, access sourcePsi.
+
+0 errors, 8 warnings

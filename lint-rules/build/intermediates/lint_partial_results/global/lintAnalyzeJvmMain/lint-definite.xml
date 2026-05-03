@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 9.2.0" type="incidents">
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of com.android.tools.lint:lint-api than 31.10.0 is available: 32.2.0">
+        <fix-replace
+            description="Change to 32.2.0"
+            family="Update versions"
+            oldString="31.10.0"
+            replacement="32.2.0"
+            priority="0"/>
+        <location
+            file="${:lint-rules*projectDir}/build.gradle.kts"
+            line="11"
+            column="17"
+            startOffset="291"
+            endLine="11"
+            endColumn="58"
+            endOffset="332"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of com.android.tools.lint:lint-checks than 31.10.0 is available: 32.2.0">
+        <fix-replace
+            description="Change to 32.2.0"
+            family="Update versions"
+            oldString="31.10.0"
+            replacement="32.2.0"
+            priority="0"/>
+        <location
+            file="${:lint-rules*projectDir}/build.gradle.kts"
+            line="12"
+            column="17"
+            startOffset="350"
+            endLine="12"
+            endColumn="61"
+            endOffset="394"/>
+    </incident>
+
+    <incident
+        id="UseTomlInstead"
+        severity="warning"
+        message="Use version catalog instead">
+        <fix-composite
+            description="Replace with new library catalog declaration for lint-api"
+            robot="true">
+            <fix-replace
+                description="Replace with lintApi = &quot;31.10.0&quot;..."
+                robot="true"
+                oldString="_lint_insert_begin_"
+                replacement="lintApi = &quot;31.10.0&quot;&#xA;"
+                priority="0">
+                <range
+                    file="$HOME/.gemini/antigravity/scratch/MessageMe/gradle/libs.versions.toml"
+                    startOffset="226"
+                    endOffset="226"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with lint-api = { module = &quot;com.android.tools.lint:lint-api&quot;, version.ref = &quot;lintApi&quot; }..."
+                robot="true"
+                oldString="_lint_insert_begin_"
+                replacement="lint-api = { module = &quot;com.android.tools.lint:lint-api&quot;, version.ref = &quot;lintApi&quot; }&#xA;"
+                priority="0">
+                <range
+                    file="$HOME/.gemini/antigravity/scratch/MessageMe/gradle/libs.versions.toml"
+                    startOffset="1776"
+                    endOffset="1776"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with libs.lint.api"
+                robot="true"
+                replacement="libs.lint.api"
+                priority="0">
+                <range
+                    file="${:lint-rules*projectDir}/build.gradle.kts"
+                    startOffset="291"
+                    endOffset="332"/>
+            </fix-replace>
+        </fix-composite>
+        <location
+            file="${:lint-rules*projectDir}/build.gradle.kts"
+            line="11"
+            column="17"
+            startOffset="291"
+            endLine="11"
+            endColumn="58"
+            endOffset="332"/>
+    </incident>
+
+    <incident
+        id="UseTomlInstead"
+        severity="warning"
+        message="Use version catalog instead">
+        <fix-composite
+            description="Replace with new library catalog declaration for lint-checks"
+            robot="true">
+            <fix-replace
+                description="Replace with lintChecks = &quot;31.10.0&quot;..."
+                robot="true"
+                oldString="_lint_insert_begin_"
+                replacement="lintChecks = &quot;31.10.0&quot;&#xA;"
+                priority="0">
+                <range
+                    file="$HOME/.gemini/antigravity/scratch/MessageMe/gradle/libs.versions.toml"
+                    startOffset="226"
+                    endOffset="226"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with lint-checks = { module = &quot;com.android.tools.lint:lint-checks&quot;, version.ref = &quot;lintChecks&quot; }..."
+                robot="true"
+                oldString="_lint_insert_begin_"
+                replacement="lint-checks = { module = &quot;com.android.tools.lint:lint-checks&quot;, version.ref = &quot;lintChecks&quot; }&#xA;"
+                priority="0">
+                <range
+                    file="$HOME/.gemini/antigravity/scratch/MessageMe/gradle/libs.versions.toml"
+                    startOffset="1776"
+                    endOffset="1776"/>
+            </fix-replace>
+            <fix-replace
+                description="Replace with libs.lint.checks"
+                robot="true"
+                replacement="libs.lint.checks"
+                priority="0">
+                <range
+                    file="${:lint-rules*projectDir}/build.gradle.kts"
+                    startOffset="350"
+                    endOffset="394"/>
+            </fix-replace>
+        </fix-composite>
+        <location
+            file="${:lint-rules*projectDir}/build.gradle.kts"
+            line="12"
+            column="17"
+            startOffset="350"
+            endLine="12"
+            endColumn="61"
+            endOffset="394"/>
+    </incident>
+
+    <incident
+        id="LintImplTextFormat"
+        severity="warning"
+        message="Multi-line issue explanation strings will interpret line separators as hard breaks, and this looks like a continuation of the same paragraph. Consider using \ at the end of the previous line to indicate that the lines should be joined, or add a blank line between unrelated sentences, or suppress this issue type here.">
+        <location
+            file="${:lint-rules*main*MAIN*sourceProvider*0*javaDir*0}/com/mt/organizemessages/lint/MainThreadIoDetector.kt"
+            line="30"
+            column="17"
+            startOffset="1117"
+            endLine="30"
+            endColumn="100"
+            endOffset="1200"/>
+    </incident>
+
+    <incident
+        id="LintImplTextFormat"
+        severity="warning"
+        message="&quot;TagsDbHelper&quot; looks like a code reference; surround with backtics in string to display as symbol, e.g. \`TagsDbHelper\`">
+        <fix-replace
+            description="Surround with backtics"
+            robot="true"
+            independent="true"
+            oldString="TagsDbHelper"
+            replacement="`TagsDbHelper`"
+            priority="0">
+            <range
+                file="${:lint-rules*main*MAIN*sourceProvider*0*javaDir*0}/com/mt/organizemessages/lint/TagsDbHelperDirectAccessDetector.kt"
+                startOffset="1146"
+                endOffset="1158"/>
+        </fix-replace>
+        <location
+            file="${:lint-rules*main*MAIN*sourceProvider*0*javaDir*0}/com/mt/organizemessages/lint/TagsDbHelperDirectAccessDetector.kt"
+            line="30"
+            column="17"
+            startOffset="1146"
+            endLine="30"
+            endColumn="29"
+            endOffset="1158"/>
+    </incident>
+
+    <incident
+        id="LintImplTextFormat"
+        severity="warning"
+        message="Multi-line issue explanation strings will interpret line separators as hard breaks, and this looks like a continuation of the same paragraph. Consider using \ at the end of the previous line to indicate that the lines should be joined, or add a blank line between unrelated sentences, or suppress this issue type here.">
+        <location
+            file="${:lint-rules*main*MAIN*sourceProvider*0*javaDir*0}/com/mt/organizemessages/lint/TagsDbHelperDirectAccessDetector.kt"
+            line="30"
+            column="17"
+            startOffset="1146"
+            endLine="30"
+            endColumn="88"
+            endOffset="1217"/>
+    </incident>
+
+    <incident
+        id="UElementAsPsi"
+        severity="warning"
+        message="Do not use `UElement` as `PsiElement`">
+        <location
+            file="${:lint-rules*main*MAIN*sourceProvider*0*javaDir*0}/com/mt/organizemessages/lint/MainThreadIoDetector.kt"
+            line="83"
+            column="43"
+            startOffset="3421"
+            endLine="83"
+            endColumn="61"
+            endOffset="3439"/>
+    </incident>
+
+</incidents>
