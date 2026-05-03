@@ -5,6 +5,7 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.provider.ContactsContract
 import android.provider.Telephony
+import androidx.test.core.app.ApplicationProvider
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -23,18 +24,21 @@ class MessageRepositoryTest {
 
     @Before
     fun setup() {
-        context = mockk(relaxed = true)
+        // Use a real Robolectric context for database operations
+        val realContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        
+        // Mock the context to return our mock content resolver for SMS/MMS/Contacts
+        context = spyk(realContext)
         every { context.contentResolver } returns contentResolver
         
-        mockkObject(TagsDbHelper.Companion)
-        every { TagsDbHelper.getInstance(any()) } returns db
-        
+        TagsDbHelper.resetInstance()
         repository = MessageRepository(context)
     }
 
     @After
     fun tearDown() {
         TagsDbHelper.resetInstance()
+        unmockkAll()
     }
 
     @Test
@@ -170,8 +174,8 @@ class MessageRepositoryTest {
 
     @Test
     fun testGetMessageMetadata() {
-        every { db.getAllTagsMap() } returns mapOf("1" to listOf("tag"))
-        every { db.getAllMessageColorsMap() } returns mapOf("1" to "#FFF")
+        repository.setTagsForMessage("1", listOf("tag"))
+        repository.setMessageColor("1", "#FFF")
         
         assertEquals(listOf("tag"), repository.getTagsForMessage("1"))
         assertEquals("#FFF", repository.getMessageColor("1"))
@@ -179,7 +183,8 @@ class MessageRepositoryTest {
 
     @Test
     fun testGetAllTags() {
-        every { db.getAllTagsMap() } returns mapOf("1" to listOf("tagB", "tagA"), "2" to listOf("tagA", "tagC"))
+        repository.setTagsForMessage("1", listOf("tagB", "tagA"))
+        repository.setTagsForMessage("2", listOf("tagA", "tagC"))
         val allTags = repository.getAllTags()
         assertEquals(listOf("tagA", "tagB", "tagC"), allTags)
     }

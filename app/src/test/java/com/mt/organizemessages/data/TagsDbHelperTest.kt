@@ -29,6 +29,7 @@ class TagsDbHelperTest {
         dbHelper.close()
         TagsDbHelper.resetInstance()
         context.deleteDatabase("tags.db")
+        unmockkAll()
     }
 
     @Test
