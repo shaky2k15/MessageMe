@@ -40,7 +40,7 @@ class MessageRepositoryTest {
     @Test
     fun testFetchSms() {
         val cursor = MatrixCursor(arrayOf(Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE))
-        cursor.addRow(arrayOf(1L, 10L, "123456", "Hello", System.currentTimeMillis(), 1))
+        cursor.addRow(arrayOf<Any>(1L, 10L, "123456", "Hello", System.currentTimeMillis(), 1))
         
         every { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), any(), any(), any()) } returns cursor
         
@@ -74,7 +74,7 @@ class MessageRepositoryTest {
     @Test
     fun testFetchContacts() {
         val cursor = MatrixCursor(arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER))
-        cursor.addRow(arrayOf("Alice", "123-456-7890"))
+        cursor.addRow(arrayOf<Any>("Alice", "123-456-7890"))
         
         every { contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, any(), any(), any(), any()) } returns cursor
         
@@ -87,22 +87,22 @@ class MessageRepositoryTest {
     fun testFetchAllMessagesCombinesSmsAndMms() {
         // Mock SMS
         val smsCursor = MatrixCursor(arrayOf(Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE))
-        smsCursor.addRow(arrayOf(1L, 10L, "123", "SMS", System.currentTimeMillis(), 1))
+        smsCursor.addRow(arrayOf<Any>(1L, 10L, "123", "SMS", System.currentTimeMillis(), 1))
         every { contentResolver.query(Telephony.Sms.CONTENT_URI, any(), any(), any(), any()) } returns smsCursor
         
         // Mock MMS
         val mmsCursor = MatrixCursor(arrayOf("_id", "thread_id", "date", "msg_box"))
-        mmsCursor.addRow(arrayOf("1", 11L, System.currentTimeMillis() / 1000, 1))
+        mmsCursor.addRow(arrayOf<Any>("1", 11L, System.currentTimeMillis() / 1000, 1))
         every { contentResolver.query(Telephony.Mms.CONTENT_URI, any(), any(), any(), any()) } returns mmsCursor
         
         // Mock MMS part
         val partCursor = MatrixCursor(arrayOf("_id", "mid", "ct", "text"))
-        partCursor.addRow(arrayOf("101", "1", "text/plain", "MMS"))
+        partCursor.addRow(arrayOf<Any>("101", "1", "text/plain", "MMS"))
         every { contentResolver.query(Uri.parse("content://mms/part"), any(), any(), any(), any()) } returns partCursor
         
         // Mock MMS addr
         val addrCursor = MatrixCursor(arrayOf("address", "type"))
-        addrCursor.addRow(arrayOf("456", 137))
+        addrCursor.addRow(arrayOf<Any>("456", 137))
         every { contentResolver.query(Uri.parse("content://mms/1/addr"), any(), any(), any(), any()) } returns addrCursor
         
         val allMessages = repository.fetchAllMessages()
@@ -144,7 +144,7 @@ class MessageRepositoryTest {
     @Test
     fun testFetchSmsWithThreadId() {
         val cursor = MatrixCursor(arrayOf(Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE))
-        cursor.addRow(arrayOf(1L, 10L, "123", "Body", 0L, 1))
+        cursor.addRow(arrayOf<Any>(1L, 10L, "123", "Body", 0L, 1))
         every { contentResolver.query(any(), any(), match { it?.contains("thread_id = ?") == true }, any(), any()) } returns cursor
         
         val msgs = repository.fetchSms(10L)
@@ -157,7 +157,7 @@ class MessageRepositoryTest {
     @Test
     fun testFetchMmsWithThreadId() {
         val cursor = MatrixCursor(arrayOf("_id", "thread_id", "date", "msg_box"))
-        cursor.addRow(arrayOf("1", 10L, 0L, 1))
+        cursor.addRow(arrayOf<Any>("1", 10L, 0L, 1))
         every { 
             contentResolver.query(Telephony.Mms.CONTENT_URI, any(), match { it?.contains("thread_id = ?") == true }, any(), any()) 
         } returns cursor
