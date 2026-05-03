@@ -34,7 +34,7 @@ class MainThreadIoDetector : Detector(), Detector.UastScanner {
                 or move the logic into a ViewModel that launches on `Dispatchers.IO`.
 
                 See ADR-003 and InboxViewModel for the correct pattern.
-            """.trimIndent(),
+            """,
             category = Category.PERFORMANCE,
             priority = 8,
             severity = Severity.WARNING,

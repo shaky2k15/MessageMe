@@ -34,7 +34,7 @@ class TagsDbHelperDirectAccessDetector : Detector(), Detector.UastScanner {
                 - Breaks the layered architecture
 
                 **Fix:** Add the operation you need as a method on MessageRepository and call it there.
-            """.trimIndent(),
+            """,
             category = Category.CORRECTNESS,
             priority = 9,
             severity = Severity.ERROR,
