@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
  * [onCleared] — it must never be registered from a Composable.
  * See ADR-003.
  */
-class InboxViewModel @JvmOverloads constructor(
+open class InboxViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: MessageRepository = MessageRepository(application),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -48,6 +48,10 @@ class InboxViewModel @JvmOverloads constructor(
     private val _allTags = MutableStateFlow<List<String>>(emptyList())
     val allTags: StateFlow<List<String>> = _allTags.asStateFlow()
 
+    /** All unique colors across all messages, sorted alphabetically. */
+    private val _allColors = MutableStateFlow<List<String>>(emptyList())
+    val allColors: StateFlow<List<String>> = _allColors.asStateFlow()
+
     // ContentObserver registered once, lives with the ViewModel
     private val contentObserver = object : android.database.ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
@@ -60,10 +64,13 @@ class InboxViewModel @JvmOverloads constructor(
         application.contentResolver.registerContentObserver(
             Uri.parse("content://mms-sms/conversations"), true, contentObserver
         )
-        // Refresh allTags whenever a tag is saved anywhere (e.g. from ThreadScreen)
+        // Refresh metadata whenever a tag or color is saved anywhere (e.g. from ThreadScreen)
         viewModelScope.launch {
-            MessageRepository.tagsChanged.collect {
-                _allTags.value = withContext(ioDispatcher) { repository.getAllTags() }
+            MessageRepository.metadataChanged.collect {
+                val tags = withContext(ioDispatcher) { repository.getAllTags() }
+                val colors = withContext(ioDispatcher) { repository.getAllColors() }
+                _allTags.value = tags
+                _allColors.value = colors
             }
         }
     }
@@ -75,10 +82,12 @@ class InboxViewModel @JvmOverloads constructor(
             val archived = repository.getArchivedThreads()
             val msgs = repository.fetchAllMessages()
             val tags = repository.getAllTags()
+            val colors = repository.getAllColors()
             _blockedSenders.value = blocked
             _archivedThreads.value = archived
             _messages.value = msgs
             _allTags.value = tags
+            _allColors.value = colors
         }
     }
 

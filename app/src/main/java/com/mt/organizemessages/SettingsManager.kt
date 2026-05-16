@@ -11,4 +11,12 @@ class SettingsManager(context: Context) {
     var isMetricsEnabled: Boolean
         get() = prefs.getBoolean("enable_metrics", true)
         set(value) = prefs.edit().putBoolean("enable_metrics", value).apply()
+
+    var isSignatureEnabled: Boolean
+        get() = prefs.getBoolean("enable_signature", false)
+        set(value) = prefs.edit().putBoolean("enable_signature", value).apply()
+
+    var signatureText: String
+        get() = prefs.getString("signature_text", "") ?: ""
+        set(value) = prefs.edit().putString("signature_text", value).apply()
 }

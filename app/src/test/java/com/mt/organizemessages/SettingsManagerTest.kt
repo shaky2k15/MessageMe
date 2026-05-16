@@ -1,46 +1,50 @@
 package com.mt.organizemessages
 
 import android.content.Context
-import android.content.SharedPreferences
-import io.mockk.*
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import androidx.test.core.app.ApplicationProvider
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class SettingsManagerTest {
 
-    private val context: Context = mockk()
-    private val sharedPrefs: SharedPreferences = mockk()
-    private val editor: SharedPreferences.Editor = mockk()
     private lateinit var settingsManager: SettingsManager
+    private lateinit var context: Context
 
     @Before
     fun setup() {
-        every { context.getSharedPreferences("app_settings", Context.MODE_PRIVATE) } returns sharedPrefs
-        every { sharedPrefs.edit() } returns editor
-        every { editor.putBoolean(any(), any()) } returns editor
-        every { editor.putString(any(), any()) } returns editor
-        every { editor.apply() } just Runs
-        
+        context = ApplicationProvider.getApplicationContext()
         settingsManager = SettingsManager(context)
     }
 
     @Test
-    fun testTaggingToggle() {
-        every { sharedPrefs.getBoolean("enable_tagging", true) } returns true
+    fun `isTaggingEnabled defaults to true and can be changed`() {
         assertTrue(settingsManager.isTaggingEnabled)
-        
         settingsManager.isTaggingEnabled = false
-        verify { editor.putBoolean("enable_tagging", false) }
+        assertFalse(settingsManager.isTaggingEnabled)
     }
 
     @Test
-    fun testMetricsToggle() {
-        every { sharedPrefs.getBoolean("enable_metrics", true) } returns true
+    fun `isMetricsEnabled defaults to true and can be changed`() {
         assertTrue(settingsManager.isMetricsEnabled)
-        
         settingsManager.isMetricsEnabled = false
-        verify { editor.putBoolean("enable_metrics", false) }
+        assertFalse(settingsManager.isMetricsEnabled)
+    }
+
+    @Test
+    fun `isSignatureEnabled defaults to false and can be changed`() {
+        assertFalse(settingsManager.isSignatureEnabled)
+        settingsManager.isSignatureEnabled = true
+        assertTrue(settingsManager.isSignatureEnabled)
+    }
+
+    @Test
+    fun `signatureText defaults to empty and can be changed`() {
+        assertEquals("", settingsManager.signatureText)
+        settingsManager.signatureText = "My Sig"
+        assertEquals("My Sig", settingsManager.signatureText)
     }
 }

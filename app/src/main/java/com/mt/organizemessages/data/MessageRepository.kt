@@ -27,14 +27,14 @@ class MessageRepository(private val context: Context) {
 
     companion object {
         /**
-         * Emits [Unit] whenever tag data is written via [setTagsForMessage].
+         * Emits [Unit] whenever tag or color data is written.
          * Observers (e.g. [com.mt.organizemessages.ui.InboxViewModel]) should
-         * collect this to refresh tag-derived UI state without a full data reload.
+         * collect this to refresh metadata-derived UI state.
          *
          * See ADR-004 for design rationale.
          */
-        private val _tagsChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-        val tagsChanged: SharedFlow<Unit> = _tagsChanged.asSharedFlow()
+        private val _metadataChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val metadataChanged: SharedFlow<Unit> = _metadataChanged.asSharedFlow()
     }
 
     private val db get() = TagsDbHelper.getInstance(context)
@@ -223,6 +223,10 @@ class MessageRepository(private val context: Context) {
     fun getMessageColor(messageId: String): String? =
         db.getAllMessageColorsMap()[messageId]
 
+    /** Returns a sorted list of all unique hex colors currently in use. */
+    fun getAllColors(): List<String> =
+        db.getAllMessageColorsMap().values.distinct().filter { it.isNotBlank() }.sorted()
+
     // ── Write: Tags / Metadata ───────────────────────────────────────────────
 
     /**
@@ -233,7 +237,7 @@ class MessageRepository(private val context: Context) {
      */
     fun setTagsForMessage(messageId: String, tags: List<String>) {
         db.setTagsForMessage(messageId, tags)
-        _tagsChanged.tryEmit(Unit)
+        _metadataChanged.tryEmit(Unit)
     }
 
     /**
@@ -241,8 +245,10 @@ class MessageRepository(private val context: Context) {
      *
      * @param colorHex A hex color string (e.g. "#D32F2F"), or null to reset to default.
      */
-    fun setMessageColor(messageId: String, colorHex: String?) =
+    fun setMessageColor(messageId: String, colorHex: String?) {
         db.setMessageColor(messageId, colorHex)
+        _metadataChanged.tryEmit(Unit)
+    }
 
     /** Adds [address] to the blocked senders list. */
     fun setBlockedSender(address: String) = db.setBlockedSender(address)

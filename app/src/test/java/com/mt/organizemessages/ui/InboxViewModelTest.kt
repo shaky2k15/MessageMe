@@ -6,6 +6,7 @@ import android.net.Uri
 import com.mt.organizemessages.ChatMessage
 import com.mt.organizemessages.data.MessageRepository
 import io.mockk.*
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -26,22 +27,30 @@ class InboxViewModelTest {
     private val repository: MessageRepository = mockk()
     private val testDispatcher = UnconfinedTestDispatcher()
     
-    private lateinit var viewModel: InboxViewModel
+    private lateinit var viewModel: TestInboxViewModel
     private val tagsChangedFlow = MutableSharedFlow<Unit>()
+
+    class TestInboxViewModel(application: Application, repository: MessageRepository, dispatcher: CoroutineDispatcher) 
+        : InboxViewModel(application, repository, dispatcher) {
+        public override fun onCleared() {
+            super.onCleared()
+        }
+    }
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         
         mockkObject(MessageRepository.Companion)
-        every { MessageRepository.tagsChanged } returns tagsChangedFlow
+        every { MessageRepository.metadataChanged } returns tagsChangedFlow
         
         coEvery { repository.getBlockedSenders() } returns setOf("123")
         coEvery { repository.getArchivedThreads() } returns setOf(456L)
-        coEvery { repository.fetchAllMessages() } returns listOf(mockk())
+        coEvery { repository.fetchAllMessages() } returns listOf(mockk<com.mt.organizemessages.ChatMessage>())
         coEvery { repository.getAllTags() } returns listOf("tag1")
+        coEvery { repository.getAllColors() } returns listOf("#FFFFFF")
         
-        viewModel = InboxViewModel(application, repository, testDispatcher)
+        viewModel = TestInboxViewModel(application, repository, testDispatcher)
     }
 
     @After
@@ -80,5 +89,27 @@ class InboxViewModelTest {
         
         coVerify { repository.setBlockedSender("999") }
         assertEquals(setOf("999"), viewModel.blockedSenders.value)
+    }
+
+    @Test
+    fun `onCleared unregisters observer`() {
+        // Trigger onCleared via reflection or by creating a subclass if needed, 
+        // but AndroidViewModel has it public for testing in some cases.
+        // For standard unit tests, we just call it.
+        viewModel.onCleared()
+        verify { application.contentResolver.unregisterContentObserver(any()) }
+    }
+
+    @Test
+    fun `metadataChanged flow triggers reload`() = runTest {
+        val newTags = listOf("newTag")
+        coEvery { repository.getAllTags() } returns newTags
+        
+        tagsChangedFlow.emit(Unit)
+        
+        // Wait for potential async work
+        advanceUntilIdle()
+        
+        assertEquals(newTags, viewModel.allTags.value)
     }
 }

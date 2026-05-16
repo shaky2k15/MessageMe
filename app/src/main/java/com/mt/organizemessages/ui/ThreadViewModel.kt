@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mt.organizemessages.ChatMessage
 import com.mt.organizemessages.data.MessageRepository
+import com.mt.organizemessages.SettingsManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ThreadViewModel @JvmOverloads constructor(
+open class ThreadViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: MessageRepository = MessageRepository(application),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -23,6 +24,8 @@ class ThreadViewModel @JvmOverloads constructor(
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
+
+    private val settingsManager = SettingsManager(application)
 
     private var currentThreadId: Long = -1L
 
@@ -46,8 +49,13 @@ class ThreadViewModel @JvmOverloads constructor(
     }
 
     fun sendMessage(address: String, text: String, subId: Int? = null) {
+        val finalMessage = if (settingsManager.isSignatureEnabled && settingsManager.signatureText.isNotBlank()) {
+            "$text\n\n${settingsManager.signatureText}"
+        } else {
+            text
+        }
         viewModelScope.launch(ioDispatcher) {
-            repository.sendSmsMessage(address, text, subId)
+            repository.sendSmsMessage(address, finalMessage, subId)
         }
     }
 

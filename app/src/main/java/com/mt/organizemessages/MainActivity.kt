@@ -77,10 +77,12 @@ sealed class AppScreen {
     object NewMessage : AppScreen()
     data class Thread(val threadId: Long, val address: String) : AppScreen()
     data class TagFilter(val tag: String) : AppScreen()
+    data class ColorFilter(val colorHex: String) : AppScreen()
     object MetricsBrowser : AppScreen()
     object SpamFolder : AppScreen()
     object Settings : AppScreen()
     object About : AppScreen()
+    object SignatureSettings : AppScreen()
 }
 
 
@@ -183,16 +185,43 @@ fun SmsAppContent(modifier: Modifier = Modifier) {
         val settingsManager = remember { SettingsManager(context) }
         var taggingEnabled by remember { mutableStateOf(settingsManager.isTaggingEnabled) }
         var metricsEnabled by remember { mutableStateOf(settingsManager.isMetricsEnabled) }
+        var signatureEnabled by remember { mutableStateOf(settingsManager.isSignatureEnabled) }
         
         when (val screen = currentScreen) {
-            is AppScreen.Inbox -> MainSmsScreen(modifier, metricsEnabled, { currentScreen = AppScreen.NewMessage }, { currentScreen = AppScreen.MetricsBrowser }, { currentScreen = AppScreen.SpamFolder }, { currentScreen = AppScreen.Settings }, { currentScreen = AppScreen.About }, { t, a -> currentScreen = AppScreen.Thread(t, a) }, { t -> currentScreen = AppScreen.TagFilter(t) })
-            is AppScreen.NewMessage -> NewMessageScreen(modifier) { currentScreen = AppScreen.Inbox }
-            is AppScreen.Thread -> ThreadScreen(modifier, screen.threadId, screen.address, taggingEnabled, { currentScreen = AppScreen.Inbox }, { t -> currentScreen = AppScreen.TagFilter(t) })
+            is AppScreen.Inbox -> MainSmsScreen(
+                modifier = modifier, 
+                isMetricsEnabled = metricsEnabled, 
+                isSignatureEnabled = signatureEnabled, 
+                onNavigateToNewMessage = { currentScreen = AppScreen.NewMessage }, 
+                onNavigateToMetrics = { currentScreen = AppScreen.MetricsBrowser }, 
+                onNavigateToSpam = { currentScreen = AppScreen.SpamFolder }, 
+                onNavigateToSettings = { currentScreen = AppScreen.Settings }, 
+                onNavigateToAbout = { currentScreen = AppScreen.About }, 
+                onNavigateToSignature = { currentScreen = AppScreen.SignatureSettings }, 
+                onNavigateToThread = { t, a -> currentScreen = AppScreen.Thread(t, a) }, 
+                onNavigateToTagFilter = { t -> currentScreen = AppScreen.TagFilter(t) }, 
+                onNavigateToColorFilter = { c -> currentScreen = AppScreen.ColorFilter(c) }
+            )
+            is AppScreen.NewMessage -> NewMessageScreen(
+                modifier = modifier, 
+                settingsManager = settingsManager, 
+                onNavigateBack = { currentScreen = AppScreen.Inbox }
+            )
+            is AppScreen.Thread -> ThreadScreen(
+                modifier = modifier, 
+                threadId = screen.threadId, 
+                address = screen.address, 
+                isTaggingEnabled = taggingEnabled, 
+                onNavigateBack = { currentScreen = AppScreen.Inbox }, 
+                onTagClick = { t -> currentScreen = AppScreen.TagFilter(t) }
+            )
             is AppScreen.TagFilter -> TagFilterScreen(modifier, screen.tag, { t, a -> currentScreen = AppScreen.Thread(t, a) }, { currentScreen = AppScreen.Inbox })
+            is AppScreen.ColorFilter -> ColorFilterScreen(modifier, screen.colorHex, { t, a -> currentScreen = AppScreen.Thread(t, a) }, { currentScreen = AppScreen.Inbox })
             is AppScreen.MetricsBrowser -> MetricsBrowserScreen(modifier) { currentScreen = AppScreen.Inbox }
             is AppScreen.SpamFolder -> SpamFolderScreen(modifier, { t, a -> currentScreen = AppScreen.Thread(t, a) }, { currentScreen = AppScreen.Inbox })
-            is AppScreen.Settings -> SettingsScreen(modifier, settingsManager, { taggingEnabled = settingsManager.isTaggingEnabled; metricsEnabled = settingsManager.isMetricsEnabled }, { currentScreen = AppScreen.Inbox })
+            is AppScreen.Settings -> SettingsScreen(modifier, settingsManager, { taggingEnabled = settingsManager.isTaggingEnabled; metricsEnabled = settingsManager.isMetricsEnabled; signatureEnabled = settingsManager.isSignatureEnabled }, { currentScreen = AppScreen.Inbox })
             is AppScreen.About -> AboutScreen(modifier) { currentScreen = AppScreen.Inbox }
+            is AppScreen.SignatureSettings -> SignatureSettingsScreen(modifier, settingsManager) { currentScreen = AppScreen.Inbox }
         }
     } else {
         Column(
@@ -226,20 +255,24 @@ fun SmsAppContent(modifier: Modifier = Modifier) {
 fun MainSmsScreen(
     modifier: Modifier = Modifier, 
     isMetricsEnabled: Boolean,
+    isSignatureEnabled: Boolean,
     onNavigateToNewMessage: () -> Unit,
     onNavigateToMetrics: () -> Unit,
     onNavigateToSpam: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToSignature: () -> Unit,
     onNavigateToThread: (Long, String) -> Unit,
-    onNavigateToTagFilter: (String) -> Unit
+    onNavigateToTagFilter: (String) -> Unit,
+    onNavigateToColorFilter: (String) -> Unit,
+    inboxViewModel: InboxViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val inboxViewModel: InboxViewModel = viewModel()
     val messages by inboxViewModel.messages.collectAsState()
     val blockedSenders by inboxViewModel.blockedSenders.collectAsState()
     val archivedThreads by inboxViewModel.archivedThreads.collectAsState()
     val allTags by inboxViewModel.allTags.collectAsState()
+    val allColors by inboxViewModel.allColors.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -290,6 +323,13 @@ fun MainSmsScreen(
                     label = { Text("About") }, selected = false,
                     onClick = { scope.launch { drawerState.close() }; onNavigateToAbout() }
                 )
+                if (isSignatureEnabled) {
+                    NavigationDrawerItem(
+                        label = { Text("Signature") }, selected = false,
+                        onClick = { scope.launch { drawerState.close() }; onNavigateToSignature() },
+                        icon = { Icon(Icons.Filled.Edit, contentDescription = null) }
+                    )
+                }
                 if (allTags.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text("Tags", style = MaterialTheme.typography.labelMedium,
@@ -302,6 +342,33 @@ fun MainSmsScreen(
                             selected = false,
                             onClick = { scope.launch { drawerState.close() }; onNavigateToTagFilter(tag) }
                         )
+                    }
+                }
+                if (allColors.isNotEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text("Category", style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(start = 28.dp, bottom = 8.dp, top = 8.dp),
+                        color = MaterialTheme.colorScheme.primary)
+                    allColors.chunked(2).forEach { pair ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 28.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            pair.forEach { colorHex ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(android.graphics.Color.parseColor(colorHex)))
+                                        .clickable {
+                                            scope.launch { drawerState.close() }
+                                            onNavigateToColorFilter(colorHex)
+                                        }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -412,9 +479,16 @@ fun MainSmsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThreadScreen(modifier: Modifier = Modifier, threadId: Long, address: String, isTaggingEnabled: Boolean, onNavigateBack: () -> Unit, onTagClick: (String) -> Unit) {
+fun ThreadScreen(
+    modifier: Modifier = Modifier, 
+    threadId: Long, 
+    address: String, 
+    isTaggingEnabled: Boolean, 
+    onNavigateBack: () -> Unit, 
+    onTagClick: (String) -> Unit,
+    threadViewModel: ThreadViewModel = viewModel()
+) {
     val context = LocalContext.current
-    val threadViewModel: ThreadViewModel = viewModel()
     val messages by threadViewModel.messages.collectAsState()
     var replyText by remember { mutableStateOf("") }
 
@@ -493,9 +567,13 @@ fun ThreadScreen(modifier: Modifier = Modifier, threadId: Long, address: String,
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewMessageScreen(modifier: Modifier = Modifier, onNavigateBack: () -> Unit) {
+fun NewMessageScreen(
+    modifier: Modifier = Modifier, 
+    settingsManager: SettingsManager, 
+    onNavigateBack: () -> Unit,
+    messageRepo: MessageRepository = MessageRepository(LocalContext.current)
+) {
     val context = LocalContext.current
-    val messageRepo = remember { MessageRepository(context) }
     var searchQuery by remember { mutableStateOf("") }
     var messageBody by remember { mutableStateOf("") }
     var contacts by remember { mutableStateOf<List<ContactInfo>>(emptyList()) }
@@ -640,7 +718,12 @@ fun NewMessageScreen(modifier: Modifier = Modifier, onNavigateBack: () -> Unit) 
                 Button(
                     onClick = {
                         if (searchQuery.isNotBlank() && messageBody.isNotBlank()) {
-                            messageRepo.sendSmsMessage(searchQuery, messageBody, selectedSim?.subscriptionId)
+                            val finalMessage = if (settingsManager.isSignatureEnabled && settingsManager.signatureText.isNotBlank()) {
+                                "$messageBody\n\n${settingsManager.signatureText}"
+                            } else {
+                                messageBody
+                            }
+                            messageRepo.sendSmsMessage(searchQuery, finalMessage, selectedSim?.subscriptionId)
                             Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
                             onNavigateBack()
                         } else {
@@ -688,6 +771,52 @@ fun TagFilterScreen(modifier: Modifier = Modifier, tag: String, onNavigateToThre
         LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
             items(messages) { msg ->
                 InboxItem(msg, onClick = { onNavigateToThread(msg.threadId, msg.address) }, {}, {})
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ColorFilterScreen(modifier: Modifier = Modifier, colorHex: String, onNavigateToThread: (Long, String) -> Unit, onNavigateBack: () -> Unit) {
+    val context = LocalContext.current
+    val messageRepo = remember { MessageRepository(context) }
+    var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    
+    LaunchedEffect(colorHex) {
+        messages = withContext(Dispatchers.IO) {
+            messageRepo.fetchAllMessages(groupedByThread = false).filter { it.colorHex == colorHex }
+        }
+    }
+    
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color(android.graphics.Color.parseColor(colorHex))))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Color: $colorHex")
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (messages.isEmpty()) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No messages with this color.")
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
+                items(messages) { msg ->
+                    InboxItem(msg, onClick = { onNavigateToThread(msg.threadId, msg.address) }, {}, {})
+                }
             }
         }
     }
@@ -771,6 +900,7 @@ fun SpamFolderScreen(modifier: Modifier = Modifier, onNavigateToThread: (Long, S
 fun SettingsScreen(modifier: Modifier = Modifier, settingsManager: SettingsManager, onSettingsChanged: () -> Unit, onNavigateBack: () -> Unit) {
     var isTaggingEnabled by remember { mutableStateOf(settingsManager.isTaggingEnabled) }
     var isMetricsEnabled by remember { mutableStateOf(settingsManager.isMetricsEnabled) }
+    var isSignatureEnabled by remember { mutableStateOf(settingsManager.isSignatureEnabled) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -816,6 +946,80 @@ fun SettingsScreen(modifier: Modifier = Modifier, settingsManager: SettingsManag
                         onSettingsChanged()
                     }
                 )
+            }
+            HorizontalDivider()
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Enable Signature", style = MaterialTheme.typography.titleMedium)
+                Switch(
+                    checked = isSignatureEnabled,
+                    onCheckedChange = { 
+                        isSignatureEnabled = it
+                        settingsManager.isSignatureEnabled = it
+                        onSettingsChanged()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SignatureSettingsScreen(modifier: Modifier = Modifier, settingsManager: SettingsManager, onNavigateBack: () -> Unit) {
+    var signatureText by remember { mutableStateOf(settingsManager.signatureText) }
+    val maxChar = 60
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = { Text("Signature Details") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(modifier = Modifier.padding(padding).padding(24.dp)) {
+            Text(
+                "Enter your signature details. This will be appended to your outgoing messages if enabled.",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+            
+            OutlinedTextField(
+                value = signatureText,
+                onValueChange = { if (it.length <= maxChar) signatureText = it },
+                label = { Text("Signature") },
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = {
+                    Text(
+                        text = "${signatureText.length} / $maxChar",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.End
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Button(
+                onClick = { 
+                    settingsManager.signatureText = signatureText
+                    onNavigateBack()
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(25.dp)
+            ) {
+                Text("Save Signature")
             }
         }
     }
