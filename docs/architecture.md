@@ -22,7 +22,7 @@ graph TD
     end
 
     subgraph Cross_Communication
-    E -.->|SharedFlow: tagsChanged| B
+    E -.->|SharedFlow: metadataChanged| B
     end
 ```
 
@@ -33,15 +33,18 @@ graph TD
 ### 1. MessageRepository (The Single Source of Truth)
 - **Responsibility**: Abstracting all data sources (System SMS, Contacts, Private Tags DB).
 - **Threading**: All methods are blocking I/O and must be called on `Dispatchers.IO`.
-- **Reactive Signals**: Exposes `tagsChanged: SharedFlow<Unit>` to notify UI layers when metadata changes without requiring a full system SMS refresh.
+- **Reactive Signals**: Exposes `metadataChanged: SharedFlow<Unit>` to notify UI layers when metadata (tags, custom colors) changes without requiring a full system SMS refresh.
 
 ### 2. ViewModels (State Management)
-- **InboxViewModel**: Manages the main message list, blocked senders, and tag drawer state. Surivives configuration changes (rotation).
-- **ThreadViewModel**: Manages specific chat history. Ensures tag and color writes are dispatched to background threads.
+- **InboxViewModel**: Manages the main message list, blocked senders, and tag/category drawer state. Survives configuration changes (rotation).
+- **ThreadViewModel**: Manages specific chat history. Ensures tag, color writes, and signature checking are dispatched to background threads.
 
 ### 3. TagsDbHelper (The Metadata Engine)
 - **Singleton Pattern**: Exactly one instance exists to prevent SQLite connection leaks.
 - **Private Data**: Stores tags, custom bubble colors, and blocked/archived status that doesn't belong in the system telephony provider.
+
+### 4. SettingsManager (User Preference Store)
+- **Responsibility**: Manages persistent user preferences (e.g. enabling tags, showing metrics, and customizing signatures) backed by local `SharedPreferences`.
 
 ---
 
@@ -56,8 +59,9 @@ We maintain detailed rationale for every major shift. See:
 ---
 
 ## Data Flow
-1. **User Action**: User edits a tag in `ThreadScreen`.
-2. **ViewModel**: `ThreadViewModel` calls `repository.setTagsForMessage()`.
-3. **Repository**: Updates the database and emits `Unit` on `tagsChanged` flow.
-4. **Reactivity**: `InboxViewModel` collects the signal and triggers an async fetch of the updated tag list.
-5. **UI**: The right-panel tag drawer refreshes automatically.
+1. **User Action**: User edits a color in `ThreadScreen`.
+2. **ViewModel**: `ThreadViewModel` calls `repository.setMessageColor()`.
+3. **Repository**: Updates the database and emits `Unit` on `metadataChanged` flow.
+4. **Reactivity**: `InboxViewModel` collects the signal and triggers an async fetch of the updated tag/color list.
+5. **UI**: The left-panel Category drawer and message list refresh automatically.
+

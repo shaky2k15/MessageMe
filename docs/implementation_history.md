@@ -45,6 +45,17 @@ This document tracks the evolution of the MessageMe app from a basic SMS client 
     - Integrated **Detekt** for static analysis and **GitHub Actions** for CI/CD gates.
     - Documented all major technical shifts via **Architecture Decision Records (ADRs)**.
 
+## Phase 6: Advanced Customization & Deployment Automation (May 2026 - Latest Update)
+- **Requirement:** Custom Message Signatures.
+    - **Implementation:** Added `SettingsManager` supporting persistent toggles, a 60-character limited `SignatureSettingsScreen`, and automatic signature appending during SMS sending in `ThreadViewModel.sendMessage` and `NewMessageScreen`.
+- **Requirement:** Color Filtering and Category Drawer Grid.
+    - **Implementation:** Re-arranged the side panel layout to display assigned colors as circular category items in a 2-column grid row layout (hiding raw hex code identifiers) and renamed the drawer section heading to "Category".
+- **Requirement:** Modern Branding Icon.
+    - **Implementation:** Replaced the default green Android icon with a custom modern adaptive vector launcher icon featuring an abstract neon coral/warm gold gradient speech bubble containing an abstract "M".
+- **Requirement:** Continuous Integration & Automatic APK Releases.
+    - **Implementation:** Configured GitHub Actions `ci.yml` to support automated creations of GitHub Releases and upload compiled debug APKs when version tags are pushed to the remote repository.
+
 ## Project Origin
 - **User:** shaky2k15
 - **Developer AI:** Antigravity (Google DeepMind)
+

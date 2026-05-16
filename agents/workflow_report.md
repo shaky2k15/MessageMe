@@ -38,6 +38,15 @@ This report documents how Antigravity used multiple autonomous agents to build, 
     - Refined Material3 styling, including removing borders from text fields and adjusting container backgrounds for a premium feel.
     - Renamed and moved features (e.g., "Not a Spam") to align with legacy requirements.
 
+### 5. Advanced Customization & Deployment Automation
+- **Goal**: Implement custom signatures, double-column category layout, adaptive branding launcher icon, and release pipeline automation.
+- **Agent Role**: **Branding & Deployment Specialist**.
+- **Actions**:
+    - Developed a toggleable message signature setting and integrated it into the message-sending pipeline in `ThreadViewModel` and `NewMessageScreen`.
+    - Transformed the side drawer to display assigned colors side-by-side in 2-column circular grids, hiding raw hex codes, and renamed the section to "Category".
+    - Crafted custom vector XML files (`ic_launcher_background.xml` and `ic_launcher_foreground.xml`) to implement a modern, glowing adaptive launcher icon.
+    - Updated `ci.yml` to automatically package the APK and publish it as a public GitHub Release asset when a version tag is pushed.
+
 ## Agent Stats
 
 | Phase | Agent Type | Primary Tools Used |
@@ -46,7 +55,9 @@ This report documents how Antigravity used multiple autonomous agents to build, 
 | **Development** | Feature Engineer | `write_to_file`, `replace_file_content` |
 | **Optimization** | QA Specialist | `./gradlew test`, `jacoco` |
 | **Polishing** | UI/UX Specialist | `view_file`, `multi_replace_file_content` |
+| **Branding & Deployment** | Branding & Deployment Specialist | `write_to_file`, `git tag`, `SoftProps Action` |
 
-**Total Agents Used**: 4 specialized roles orchestrated by the Antigravity core.
-**Tokens Used**: ~1.2M tokens (Estimate).
-**Efficiency**: Accelerated the project from zero to a fully functional, tested messaging app in approximately 4 days of intermittent work.
+**Total Agents Used**: 5 specialized roles orchestrated by the Antigravity core.
+**Tokens Used**: ~3.7M tokens (Estimate).
+**Efficiency**: Accelerated the project from zero to a fully functional, fully tested messaging app with advanced customization and zero-friction CI/CD release automation.
+

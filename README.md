@@ -8,11 +8,16 @@ An advanced, power-user SMS/MMS client for Android built with Jetpack Compose an
 - **Clean Architecture**: Decoupled Data, Domain, and UI layers.
 - **Multi-SIM Support**: Intelligent carrier detection and selection.
 - **Dynamic Tagging**: Organize messages with custom labels.
+- **Color Categories**: Color-code specific messages and filter by assigned colors using a sleek category grid row in the navigation drawer.
+- **Custom Message Signatures**: Add custom signatures to your outgoing texts with persistent toggleable configuration in settings and a character limit of 60 characters.
+- **Modern Adaptive Launcher Branding**: Displays a futuristic neon coral/warm gold gradient speech bubble containing an abstract "M" that adapts automatically to circular, square, or squircle frames.
+- **Automated GitHub Releases**: Pipeline integration for automatically packing and publishing APK releases directly on Git tag pushes.
 - **Spam Protection**: Parallel shadow database for blocking and archiving.
 - **Cloud Backup**: Automated Google Drive backup in standard XML format.
 - **Metrics Dashboard**: Visual analytics of your messaging habits.
 
 ## Compatibility
+
 - **Minimum Requirement**: Android 11.0 (API Level 30) or higher.
 - **Optimized For**: Android 16 (API Level 36) - Latest 2026 Release.
 - **Device Support**: Fully compatible with modern high-end devices like the Samsung S24/S25/S26 series, including support for Edge-to-Edge displays and the latest Notification Permission models.

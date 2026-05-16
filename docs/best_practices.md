@@ -16,7 +16,8 @@ This guide outlines the best practices followed during the modernization of **Me
 ## 3. Testing & Coverage
 - **Robolectric for Framework Testing**: Use Robolectric for JVM-based tests requiring `ContentResolver` or `Context`.
 - **Mocking with MockK**: Isolate logic by mocking system services like `SmsManager`.
-- **Kover for Metrics**: Use `kotlinx-kover` for accurate coverage reporting. Aim for 95%+ coverage on all `data` and `ui/viewmodel` layers.
+- **JaCoCo for Metrics**: Use **JaCoCo** for accurate coverage reporting. Aim for 98%+ coverage on all `data` and `ui/viewmodel` layers.
+
 
 ## 4. Agentic Workflow Steps
 1.  **Architecture Decision Records (ADRs)**: Always document the *why* behind a pattern change before implementing it. This provides the AI and future developers with a source of truth.
